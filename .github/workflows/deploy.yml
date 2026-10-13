@@ -19,11 +19,22 @@ jobs:
           node-version: '20'
 
       - name: Install clasp
-        run: npm install -g @google/clasp@2
+        run: npm install -g @google/clasp@2.4.2
 
       - name: Authenticate clasp
         run: |
-          echo '${{ secrets.CLASPRC_JSON }}' > "$HOME/.clasprc.json"
+          if [ -z "$CLASPRC_JSON" ]; then
+            echo "::error::Secret CLASPRC_JSON kosong / belum diset!"
+            exit 1
+          fi
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          echo "Credentials tersimpan. Cek struktur (tanpa bocorkan token):"
+          node -e "const c=require(process.env.HOME+'/.clasprc.json'); const k=Object.keys(c.tokens||{}); console.log('token keys:', k); console.log('has refresh_token:', !!c.tokens?.[k[0]]?.refresh_token);"
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+
+      - name: Verify clasp login
+        run: clasp login --status || true
 
       - name: Push code to Apps Script
         run: clasp push --force
