@@ -19,7 +19,7 @@ jobs:
           node-version: '20'
 
       - name: Install clasp
-        run: npm install -g @google/clasp@2.4.2
+        run: npm install -g @google/clasp@3
 
       - name: Authenticate clasp
         run: |
@@ -32,9 +32,6 @@ jobs:
           node -e "const c=require(process.env.HOME+'/.clasprc.json'); const k=Object.keys(c.tokens||{}); console.log('token keys:', k); console.log('has refresh_token:', !!c.tokens?.[k[0]]?.refresh_token);"
         env:
           CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
-
-      - name: Verify clasp login
-        run: clasp login --status || true
 
       - name: Push code to Apps Script
         run: clasp push --force
