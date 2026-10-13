@@ -1,0 +1,9 @@
+tests/**
+src/**
+scripts/**
+dist/**
+node_modules/**
+package.json
+package-lock.json
+vite.config.js
+index.html

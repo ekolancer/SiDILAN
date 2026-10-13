@@ -18,6 +18,14 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and test frontend
+        run: |
+          npm test
+          npm run test:build
+
       - name: Install clasp
         run: npm install -g @google/clasp@3
 
@@ -40,11 +48,9 @@ jobs:
         env:
           DEPLOYMENT_ID: ${{ secrets.DEPLOYMENT_ID }}
         run: |
-          VERSION_DESC="Deploy from GitHub ${GITHUB_SHA:0:7} by ${GITHUB_ACTOR}"
-          if [ -n "$DEPLOYMENT_ID" ]; then
-            echo "Deploying ke deployment ID: $DEPLOYMENT_ID"
-            clasp deploy --deploymentId "$DEPLOYMENT_ID" --description "$VERSION_DESC"
-          else
-            echo "DEPLOYMENT_ID kosong, membuat deployment baru..."
-            clasp deploy --description "$VERSION_DESC"
+          if [ -z "$DEPLOYMENT_ID" ]; then
+            echo "::error::Secret DEPLOYMENT_ID wajib diisi agar workflow memperbarui deployment tetap."
+            exit 1
           fi
+          VERSION_DESC="Deploy from GitHub ${GITHUB_SHA:0:7} by ${GITHUB_ACTOR}"
+          clasp deploy --deploymentId "$DEPLOYMENT_ID" --description "$VERSION_DESC"

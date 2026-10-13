@@ -4,20 +4,22 @@
 **Platform:** Google Apps Script V8, HTML Service dan spreadsheet yang sudah digunakan  
 **Cakupan:** Baca, tambah dan edit pencatatan surat masuk  
 **Dokumen terkait:** [PRD.md](PRD.md), [design.md](design.md)  
-**Status:** Spesifikasi implementasi; kode dan deployment belum dibuat
+**Status:** Vue 3 + Vite disepakati; migrasi UI/build belum diterapkan
 
 ## 1. Arsitektur minimum
 
-Aplikasi terdiri dari tampilan HTML/CSS/JavaScript dan fungsi server Google Apps Script. Tampilan memanggil fungsi server melalui `google.script.run`; server membaca dan memperbarui tab SuratMasuk pada spreadsheet yang sama.
+Aplikasi menggunakan Vue 3 untuk UI, Vite untuk build frontend, dan Google Apps Script sebagai web app/backend. Vite membangun aset statis yang disajikan HTML Service; komponen Vue memanggil fungsi server melalui `google.script.run`. Backend membaca dan memperbarui tab SuratMasuk pada spreadsheet yang sama.
 
 | Komponen | Tanggung jawab |
 | --- | --- |
-| HTML Service | Form, daftar/detail, dashboard dan preview rekap |
+| Vue 3 | Form, daftar/detail, dashboard dan preview rekap; tidak mengakses spreadsheet langsung |
+| Vite | Build aset frontend menjadi HTML/CSS/JavaScript yang kompatibel dengan HTML Service |
+| HTML Service | Menyajikan hasil build dari Apps Script |
 | Apps Script | Pemeriksaan akses, validasi, pencarian, penentuan agenda dan penyimpanan |
 | Spreadsheet saat ini | Sumber data utama dengan 14 kolom A:N |
 | Google Drive saat ini | Lokasi berkas yang ditautkan pada register; izin berkas mengikuti konfigurasi yang sudah berlaku |
 
-Satu proyek Apps Script terhubung ke ID spreadsheet tetap. Tidak ada database baru, pemisahan register menjadi tabel Letters/Dispositions/Assignments, proses migrasi, mesin status, request ledger permanen atau worker latar belakang untuk v1.
+Satu proyek Apps Script terhubung ke ID spreadsheet tetap. Tidak ada database baru, pemisahan register menjadi tabel Letters/Dispositions/Assignments, proses migrasi, mesin status, request ledger permanen atau worker latar belakang untuk v1. Build Vite berjalan di CI sebelum `clasp push`; hasil build yang disinkronkan adalah satu-satunya UI yang diunggah. URL web app tetap dilayani Apps Script, bukan server Vite terpisah.
 
 ## 2. Koneksi spreadsheet
 
@@ -172,26 +174,39 @@ CSV mempertahankan 14 kolom dan quoting yang benar, dengan mitigasi awal formula
 
 ## 11. Struktur kode dan konfigurasi rilis
 
-| File usulan | Isi |
-| --- | --- |
-| appsscript.json | V8, timezone Asia/Jakarta, scope dan Advanced Sheets Service |
-| Code.gs | doGet dan fungsi publik |
-| SheetService.gs | Mapping A:N, baca kandidat, nomor agenda dan write terbatas |
-| Auth.gs | Identitas dan daftar akses |
-| Validation.gs | Field baru/dirty, tanggal dan URL |
-| Report.gs | Dashboard dan rekap |
-| Index.html | Shell aplikasi |
-| Styles.html | CSS responsif |
-| Client.html | Interaksi form, query dan feedback |
+Struktur frontend yang disepakati:
 
-Tidak perlu framework frontend atau hosting tambahan. Scope dipilih minimum untuk spreadsheet dan identitas yang diperlukan; membuka tautan Drive di browser tidak membutuhkan kemampuan server mengubah izin Drive.
+| File / direktori | Isi |
+| --- | --- |
+| `src/main.js` | Inisialisasi Vue dan mount aplikasi |
+| `src/App.vue` | Shell UI dan navigasi |
+| `src/components/` | Komponen daftar, detail, form, dashboard dan rekap |
+| `src/services/appsScript.js` | Wrapper Promise untuk `google.script.run` |
+| `src/styles/` | CSS aplikasi dan responsif |
+| `Code.js` | `doGet` serta fungsi publik/internal Apps Script |
+| `Index.html` | Shell HTML Service hasil build Vite; bukan sumber UI yang diedit manual |
+| `vite.config.js` | Build satu entry HTML dan pengaturan aset kompatibel HTML Service |
+| `.claspignore` | Mengecualikan source frontend, dependency, test dan file build perantara dari upload |
+| `appsscript.json` | V8, timezone Asia/Jakarta, scope dan Advanced Sheets Service |
+
+Source Vue/Vite dikelola terpisah dari file Apps Script yang didorong. Build menghasilkan HTML/CSS/JavaScript statis tanpa server Node saat runtime. Pipeline GitHub Actions menjalankan `npm ci`, build dan pengujian, lalu menyiapkan hanya output Apps Script sebelum `clasp push` dan update deployment tetap. Build lokal tidak boleh mengubah source yang tidak terkait; hasil final diperiksa sebelum push. Scope dipilih minimum untuk spreadsheet dan identitas yang diperlukan; membuka tautan Drive di browser tidak membutuhkan kemampuan server mengubah izin Drive.
 
 Uji dengan salinan spreadsheet yang mempertahankan struktur/sampel. Target produksi tetap spreadsheet yang sekarang digunakan; salinan uji bukan database baru yang perlu dimigrasikan. Atur script dan spreadsheet pada timezone Asia/Jakarta setelah memastikan perubahan timezone target disetujui pemilik.
 
 Deployment produksi memakai versi tertentu dan URL /exec. /dev hanya untuk pengujian pengembang. Pengelola memastikan akses akun dan hak spreadsheet sebelum rilis. Backup/copy manual spreadsheet sebelum rilis dianjurkan sebagai langkah operasi; sistem backup otomatis baru bukan fitur wajib v1.
 
-## 12. Pemeriksaan sebelum rilis
+## 12. Pipeline build dan rilis
 
+- Source Vue/Vite menjadi sumber UI; jangan mengedit hasil build `Index.html` secara manual.
+- CI memasang dependency dari lockfile dengan `npm ci`, menjalankan test, lalu membuat output production tanpa development server.
+- Build harus menghasilkan entry `Index.html` dan inline atau salin aset ke format yang disajikan HTML Service; tidak boleh menyisakan referensi `/src`, Vite dev client, import map/runtime server, atau URL asset yang tidak tersedia pada Apps Script.
+- Pipeline mengunggah `Code.js`, `Index.html`, `appsscript.json` dan file `.gs` yang diperlukan saja. `node_modules`, source UI, test dan dokumentasi tidak dikirim sebagai file script.
+- Hanya setelah test/build lulus, CI menjalankan `clasp push --force`, membuat versi dan memperbarui deployment ID tetap dari secret. Jika ID tidak tersedia, pipeline harus gagal alih-alih membuat deployment duplikat.
+- Perubahan permission, Script Properties, spreadsheet target dan pengaturan deployment tidak dilakukan oleh build.
+
+## 13. Pemeriksaan sebelum rilis
+
+- Build Vue production berjalan deterministik dari lockfile dan output kompatibel dengan HTML Service.
 - Baca data lama dan cocokkan 677 kandidat pada snapshot; template/anotasi tidak dihitung.
 - Tambah pada salinan uji tanpa menimpa template, anotasi, merge atau data di kolom lain.
 - Dua create bersamaan melalui aplikasi menghasilkan agenda berbeda.
@@ -203,13 +218,13 @@ Deployment produksi memakai versi tertentu dan URL /exec. /dev hanya untuk pengu
 - Dashboard tidak menganggap posisi/isi tindak lanjut sebagai bukti penyelesaian.
 - Form desktop/mobile dan kegagalan koneksi/simpan diperiksa.
 
-## 13. Batas v1 dan arah berikutnya
+## 14. Batas v1 dan arah berikutnya
 
 Workflow kompleks, tabel persetujuan, penugasan PIC, tenggat, audit permanen, upload langsung dan penyimpanan baru tidak diperlukan untuk menjalankan pencatatan v1. Penambahan fitur tersebut kelak harus berdasarkan kebutuhan yang disepakati.
 
 V2 menambahkan surat keluar dan integrasi WhatsApp. Tidak membuat endpoint webhook, antrean pengiriman atau token WA pada v1.
 
-## 14. Referensi resmi
+## 15. Referensi resmi
 
 Diakses 13 Oktober 2026. Struktur dan pilihan implementasi di atas merupakan rancangan SiDILAN.
 

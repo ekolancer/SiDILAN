@@ -1,0 +1,38 @@
+{
+  "name": "sidilan",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node scripts/copy-build.js",
+    "test": "node tests/read-contract.test.js",
+    "test:build": "npm run build && node scripts/build-contract.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ekolancer/SiDILAN.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ekolancer/SiDILAN/issues"
+  },
+  "homepage": "https://github.com/ekolancer/SiDILAN#readme",
+  "dependencies": {
+    "@lucide/vue": "^1.56.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "reka-ui": "^2.11.0",
+    "tailwind-merge": "^3.7.0",
+    "vue": "^3.5.44"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-vue": "^6.0.10",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.3.4",
+    "vite-plugin-singlefile": "^2.3.3"
+  }
+}
