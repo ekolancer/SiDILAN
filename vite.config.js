@@ -11,6 +11,6 @@ export default defineConfig({
     outDir: 'dist',
     assetsInlineLimit: 100000000,
     cssCodeSplit: false,
-    rollupOptions: { output: { inlineDynamicImports: true } },
+    rollupOptions: { input: fileURLToPath(new URL('./app.html', import.meta.url)) },
   },
 })
