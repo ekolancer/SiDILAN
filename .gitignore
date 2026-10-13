@@ -1,0 +1,23 @@
+# clasp credentials (JANGAN pernah commit ini)
+.clasprc.json
+.clasprc.json.old
+
+# clasp local config (berisi scriptId spesifik project)
+# Hapus baris ini kalau kamu mau simpan scriptId di repo.
+# Kalau di-ignore, CI membaca scriptId dari .clasp.json yang di-generate via secret.
+# Lihat catatan di README-CICD.md
+# .clasp.json
+
+# Node
+node_modules/
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Build / temp
+dist/
+*.log
