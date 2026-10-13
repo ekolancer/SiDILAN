@@ -37,540 +37,292 @@
             <p class="text-sm text-gray-500">Sistem Digital Monitoring Tindak Lanjut Surat</p>
         </div>
         
-        <div id="loginAlert" class="hidden mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm flex items-center gap-2">
-            <i class="fas fa-exclamation-circle"></i> <span id="loginAlertText">Error</span>
+        <div id="accessStatus" role="status" aria-live="polite" class="mb-4 p-4 bg-blue-50 text-blue-900 rounded-lg text-sm">
+            Memeriksa akses akun Google...
         </div>
-
-        <form id="loginForm" onsubmit="handleLogin(event)">
-            <div class="mb-5">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                <div class="relative">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400"><i class="fas fa-user"></i></span>
-                    <input type="text" id="username" class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" required placeholder="Masukkan username">
-                </div>
-            </div>
-            <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                <div class="relative">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400"><i class="fas fa-lock"></i></span>
-                    <input type="password" id="password" class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" required placeholder="••••••••">
-                </div>
-            </div>
-            <button type="submit" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg shadow-md transition-colors flex justify-center items-center gap-2">
-                <span>Masuk Sistem</span>
-            </button>
-        </form>
+        <p id="accessIdentity" class="hidden mb-4 text-sm text-gray-600"></p>
+        <button id="retryAccess" type="button" onclick="initializeAppStatus()" class="hidden w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg shadow-md transition-colors">
+            Coba lagi
+        </button>
         <div class="mt-6 text-center text-xs text-gray-400">
             &copy; 2026 SiDILAN. All rights reserved.
         </div>
     </div>
 </div>
 
-<!-- VIEW: MAIN APP (Hidden initially) -->
-<div id="mainView" class="hidden h-screen w-full flex bg-gray-50">
-    
-    <!-- Sidebar -->
-    <aside class="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm z-10 transition-transform duration-300">
-        <div class="h-16 flex items-center px-6 border-b border-gray-100">
-            <h2 class="text-xl font-bold text-blue-700 tracking-tight"><i class="fas fa-envelope-open-text mr-2"></i> SiDILAN</h2>
+<!-- VIEW: REGISTER -->
+<div id="mainView" class="hidden min-h-screen w-full bg-gray-50">
+    <header class="bg-white border-b border-gray-200 px-4 py-4 sm:px-6">
+        <div class="mx-auto flex max-w-6xl items-center justify-between gap-4">
+            <h2 class="text-xl font-bold text-blue-900">SiDILAN <span class="font-normal text-gray-500">/ Surat Masuk</span></h2>
+            <span id="userRoleDisplay" class="text-sm text-gray-600"></span>
         </div>
-        <div class="p-4 flex items-center gap-3 border-b border-gray-100">
-            <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg">
-                <span id="userAvatar">A</span>
+    </header>
+    <main class="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+        <p id="userNameDisplay" class="mb-4 text-sm text-gray-600"></p>
+        <section class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
+            <h1 class="text-2xl font-semibold text-gray-900">Daftar surat masuk</h1>
+            <form id="searchForm" class="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]" role="search">
+                <label class="sr-only" for="keyword">Kata kunci pencarian</label>
+                <input id="keyword" maxlength="200" class="min-w-0 rounded-lg border border-gray-300 px-3 py-2" placeholder="Cari agenda, nomor surat, asal, atau perihal" autocomplete="off">
+                <button class="rounded-lg bg-blue-700 px-5 py-2 font-semibold text-white hover:bg-blue-800" type="submit">Cari</button>
+            </form>
+            <div class="mt-3 flex flex-wrap items-center gap-3">
+                <label for="positions" class="text-sm font-medium">Posisi surat</label>
+                <select id="positions" multiple size="1" aria-label="Filter posisi surat" class="max-w-full rounded-lg border border-gray-300 px-2 py-2"></select>
+                <button id="resetSearch" type="button" class="text-sm text-blue-700 underline">Reset</button>
+                <button id="reload" type="button" class="text-sm text-blue-700 underline">Muat ulang</button>
             </div>
-            <div>
-                <p class="text-sm font-semibold text-gray-800" id="userNameDisplay">Admin User</p>
-                <p class="text-xs text-gray-500" id="userRoleDisplay">Administrator</p>
+            <p id="listStatus" role="status" aria-live="polite" class="mt-4 text-sm text-gray-600">Masukkan kata kunci pencarian.</p>
+            <p id="warningStatus" class="hidden mt-2 text-sm text-amber-800"></p>
+            <div id="recordList" class="mt-4 divide-y divide-gray-200"></div>
+            <nav id="pagination" aria-label="Paginasi daftar surat" class="hidden mt-5 flex items-center justify-between gap-3">
+                <button id="previousPage" type="button" class="rounded border px-3 py-2 disabled:opacity-40">Sebelumnya</button>
+                <span id="pageStatus" class="text-sm text-gray-600"></span>
+                <button id="nextPage" type="button" class="rounded border px-3 py-2 disabled:opacity-40">Berikutnya</button>
+            </nav>
+        </section>
+        <section id="detailPanel" aria-labelledby="detailTitle" class="hidden mt-5 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6" tabindex="-1">
+            <div class="flex items-start justify-between gap-3">
+                <div><h2 id="detailTitle" class="text-xl font-semibold"></h2><p id="detailAgenda" class="mt-1 text-sm text-gray-600"></p></div>
+                <button id="closeDetail" type="button" class="rounded border px-3 py-2">Tutup</button>
             </div>
-        </div>
-        <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-            <button onclick="navigate('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-blue-700 bg-blue-50 transition-colors"><i class="fas fa-chart-pie w-5"></i> Dashboard</button>
-            <button onclick="navigate('surat-masuk')" id="nav-surat-masuk" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-inbox w-5"></i> Surat Masuk</button>
-            <button onclick="navigate('surat-keluar')" id="nav-surat-keluar" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-paper-plane w-5"></i> Surat Keluar</button>
-            <button onclick="navigate('disposisi')" id="nav-disposisi" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-share-node w-5"></i> Disposisi</button>
-            <div class="pt-4 pb-1"><p class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Sistem</p></div>
-            <button onclick="navigate('laporan')" id="nav-laporan" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-print w-5"></i> Laporan</button>
-            <button onclick="handleLogout()" class="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-red-600 hover:bg-red-50 transition-colors mt-auto"><i class="fas fa-sign-out-alt w-5"></i> Logout</button>
-        </nav>
-    </aside>
-
-    <!-- Main Content Area -->
-    <main class="flex-1 flex flex-col h-screen overflow-hidden relative">
-        <!-- Top Header -->
-        <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm z-0">
-            <h2 id="pageTitle" class="text-xl font-semibold text-gray-800">Dashboard</h2>
-            <div class="flex items-center gap-4">
-                <span class="text-sm text-gray-500" id="currentDate"></span>
-            </div>
-        </header>
-
-        <!-- Content Container -->
-        <div class="flex-1 overflow-auto p-6 relative" id="contentContainer">
-            
-            <!-- DASHBOARD SECTION -->
-            <div id="sec-dashboard" class="section-content fade-in">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <!-- Card 1 -->
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center gap-4 border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
-                        <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl"><i class="fas fa-inbox"></i></div>
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">Total Surat Masuk</p>
-                            <h3 class="text-2xl font-bold text-gray-800" id="statMasuk">...</h3>
-                        </div>
-                    </div>
-                    <!-- Card 2 -->
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center gap-4 border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
-                        <div class="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xl"><i class="fas fa-paper-plane"></i></div>
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">Total Surat Keluar</p>
-                            <h3 class="text-2xl font-bold text-gray-800" id="statKeluar">...</h3>
-                        </div>
-                    </div>
-                    <!-- Card 3 -->
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center gap-4 border-l-4 border-l-orange-500 hover:shadow-md transition-shadow">
-                        <div class="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-xl"><i class="fas fa-clock"></i></div>
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">Perlu Tindak Lanjut</p>
-                            <h3 class="text-2xl font-bold text-gray-800" id="statTL">...</h3>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Selamat Datang di SiDILAN</h3>
-                    <p class="text-gray-600 text-sm leading-relaxed">
-                        Sistem Digital Monitoring Tindak Lanjut Surat memudahkan Anda dalam mendata, mengelola, dan memonitor surat menyurat secara efisien. 
-                        Gunakan menu navigasi di sebelah kiri untuk mengakses data Surat Masuk, Surat Keluar, dan Disposisi.
-                    </p>
-                </div>
-            </div>
-
-            <!-- SURAT MASUK SECTION -->
-            <div id="sec-surat-masuk" class="section-content hidden fade-in h-full flex flex-col">
-                <div class="flex justify-between items-center mb-6">
-                    <div class="relative w-64">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400"><i class="fas fa-search"></i></span>
-                        <input type="text" placeholder="Cari surat..." class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                    </div>
-                    <button onclick="openModal('modalTambahSurat')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2 transition-colors">
-                        <i class="fas fa-plus"></i> Tambah Surat Masuk
-                    </button>
-                </div>
-
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 flex-1 overflow-hidden flex flex-col">
-                    <div class="overflow-x-auto flex-1">
-                        <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
-                            <thead>
-                                <tr class="bg-gray-50 border-b border-gray-200 text-gray-600 uppercase text-xs tracking-wider">
-                                    <th class="px-4 py-3 font-semibold">No. Agenda</th>
-                                    <th class="px-4 py-3 font-semibold">Tgl Diterima</th>
-                                    <th class="px-4 py-3 font-semibold">No. Surat</th>
-                                    <th class="px-4 py-3 font-semibold">Asal Surat</th>
-                                    <th class="px-4 py-3 font-semibold">Perihal</th>
-                                    <th class="px-4 py-3 font-semibold">Posisi</th>
-                                    <th class="px-4 py-3 font-semibold text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tableBodySuratMasuk" class="divide-y divide-gray-100">
-                                <!-- Data will be loaded here -->
-                                <tr>
-                                    <td colspan="7" class="px-4 py-8 text-center text-gray-500">
-                                        <i class="fas fa-spinner fa-spin mr-2"></i> Memuat data...
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="px-4 py-3 border-t border-gray-200 bg-gray-50 text-xs text-gray-500 flex justify-between items-center">
-                        <span id="infoTotalMasuk">Menampilkan 0 data</span>
-                        <div class="flex gap-1">
-                            <button class="px-2 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50">Prev</button>
-                            <button class="px-2 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50">Next</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- PLACEHOLDERS FOR OTHER SECTIONS -->
-            <div id="sec-surat-keluar" class="section-content hidden fade-in">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
-                    <div class="text-gray-300 mb-4 text-5xl"><i class="fas fa-paper-plane"></i></div>
-                    <h3 class="text-lg font-medium text-gray-800 mb-1">Modul Surat Keluar</h3>
-                    <p class="text-sm text-gray-500">Tampilan serupa dengan Surat Masuk. (Dalam mode demo)</p>
-                </div>
-            </div>
-            <div id="sec-disposisi" class="section-content hidden fade-in">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
-                    <div class="text-gray-300 mb-4 text-5xl"><i class="fas fa-share-nodes"></i></div>
-                    <h3 class="text-lg font-medium text-gray-800 mb-1">Modul Disposisi</h3>
-                    <p class="text-sm text-gray-500">Fokus pada field Isi Disposisi dan Tujuan Dispo. (Dalam mode demo)</p>
-                </div>
-            </div>
-            <div id="sec-laporan" class="section-content hidden fade-in">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
-                    <div class="text-gray-300 mb-4 text-5xl"><i class="fas fa-print"></i></div>
-                    <h3 class="text-lg font-medium text-gray-800 mb-1">Modul Laporan</h3>
-                    <p class="text-sm text-gray-500">Export data ke Excel/PDF. (Dalam mode demo)</p>
-                </div>
-            </div>
-
-        </div>
+            <dl id="detailFields" class="mt-5 grid gap-4 sm:grid-cols-2"></dl>
+        </section>
     </main>
 </div>
 
-<!-- MODAL: TAMBAH SURAT MASUK -->
-<div id="modalTambahSurat" class="hidden fixed inset-0 z-50 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden fade-in">
-        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-            <h3 class="text-lg font-bold text-gray-800">Form Input Surat Masuk</h3>
-            <button onclick="closeModal('modalTambahSurat')" class="text-gray-400 hover:text-red-500 transition-colors"><i class="fas fa-times text-xl"></i></button>
-        </div>
-        
-        <div class="p-6 overflow-y-auto flex-1">
-            <form id="formSuratMasuk" onsubmit="handleSaveSuratMasuk(event)" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Kiri -->
-                <div class="space-y-4">
-                    <h4 class="font-semibold text-blue-700 text-sm border-b pb-1">Informasi Dasar</h4>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Nomor Agenda</label>
-                        <input type="text" id="fm_agenda" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Tanggal Diterima</label>
-                        <input type="date" id="fm_tglTerima" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">No. Surat</label>
-                        <input type="text" id="fm_noSurat" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Tanggal Surat</label>
-                        <input type="date" id="fm_tglSurat" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Asal Surat</label>
-                        <input type="text" id="fm_asalSurat" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Perihal</label>
-                        <textarea id="fm_perihal" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 outline-none"></textarea>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Link Berkas Surat (G-Drive)</label>
-                        <input type="url" id="fm_linkBerkas" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 outline-none">
-                    </div>
-                </div>
-
-                <!-- Kanan -->
-                <div class="space-y-4">
-                    <h4 class="font-semibold text-blue-700 text-sm border-b pb-1">Disposisi & Tindak Lanjut</h4>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Uraian Berkas</label>
-                        <textarea id="fm_uraian" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 outline-none"></textarea>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Isi Disposisi</label>
-                        <textarea id="fm_isiDispo" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 outline-none"></textarea>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Tujuan Disposisi</label>
-                        <input type="text" id="fm_tujuanDispo" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 outline-none">
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-700 mb-1">Ket/Tgl Paraf</label>
-                            <input type="text" id="fm_ketParaf" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-700 mb-1">Posisi Surat</label>
-                            <input type="text" id="fm_posisi" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 outline-none">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Keterangan Tindak Lanjut</label>
-                        <textarea id="fm_ketTL" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 outline-none"></textarea>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Link Berkas TL</label>
-                        <input type="url" id="fm_linkTL" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 outline-none">
-                    </div>
-                </div>
-            </form>
-        </div>
-        
-        <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
-            <button type="button" onclick="closeModal('modalTambahSurat')" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Batal</button>
-            <button type="submit" form="formSuratMasuk" id="btnSimpanSurat" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-2">
-                <i class="fas fa-save"></i> Simpan Data
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Custom Notification Toast -->
-<div id="toast" class="fixed top-4 right-4 z-[100] transform transition-all duration-300 translate-x-full opacity-0">
-    <div class="bg-white border-l-4 border-blue-500 shadow-lg rounded px-4 py-3 flex items-center gap-3">
-        <i id="toastIcon" class="fas fa-info-circle text-blue-500"></i>
-        <div id="toastMsg" class="text-sm font-medium text-gray-700">Notifikasi</div>
-    </div>
-</div>
-
 <script>
-    // --- STATE MANAGEMENT ---
-    let currentUser = null;
-    const viewNames = {
-        'dashboard': 'Dashboard',
-        'surat-masuk': 'Data Surat Masuk',
-        'surat-keluar': 'Data Surat Keluar',
-        'disposisi': 'Manajemen Disposisi',
-        'laporan': 'Laporan Sistem'
-    };
+    let statusRequestPending = false;
+    let listState = { keyword: '', positions: undefined, page: 1, pageCount: 1 };
 
-    // --- UTILITIES ---
-    // Wrapper untuk google.script.run dengan Promise (Jika berjalan di App Script)
     function runGoogleScript(funcName, ...args) {
         return new Promise((resolve, reject) => {
-            if (typeof google !== 'undefined' && google.script && google.script.run) {
-                google.script.run
-                    .withSuccessHandler(resolve)
-                    .withFailureHandler(reject)
-                    [funcName](...args);
-            } else {
-                // Mockup data for local testing preview
-                console.log(`Mocking call to ${funcName}`, args);
-                setTimeout(() => {
-                    if (funcName === 'checkLogin') {
-                        if(args[0]==='admin') resolve({success:true, user:{name:'Administrator', role:'Admin'}});
-                        else resolve({success:false, message:'Invalid credentials demo.'});
-                    }
-                    if (funcName === 'getDashboardStats') resolve(JSON.stringify({suratMasuk: 125, suratKeluar: 84, total: 209, perluTindakLanjut: 12}));
-                    if (funcName === 'getSuratMasuk') resolve(JSON.stringify([
-                        {"Nomor Agenda":"001/2026","Tanggal Di Terima":"2026-10-10","No. Surat":"123/XYZ/2026","Asal Surat":"PT. ABC","Perihal":"Undangan Rapat","Posisi Surat":"Kepala Dinas"},
-                        {"Nomor Agenda":"002/2026","Tanggal Di Terima":"2026-10-11","No. Surat":"124/XYZ/2026","Asal Surat":"Kementerian","Perihal":"Edaran Cuti","Posisi Surat":"Sekretaris"}
-                    ]));
-                    if (funcName === 'saveSuratMasuk') resolve({success:true, message:'Demo: Berhasil disimpan'});
-                }, 800);
+            if (typeof google === 'undefined' || !google.script || !google.script.run) {
+                reject(new Error('APPS_SCRIPT_UNAVAILABLE'));
+                return;
             }
+            google.script.run
+                .withSuccessHandler(resolve)
+                .withFailureHandler(reject)
+                [funcName](...args);
         });
     }
 
-    function showToast(message, type = 'info') {
-        const toast = document.getElementById('toast');
-        const msg = document.getElementById('toastMsg');
-        const icon = document.getElementById('toastIcon');
-        
-        msg.textContent = message;
-        if(type === 'success') {
-            toast.firstElementChild.className = "bg-white border-l-4 border-green-500 shadow-lg rounded px-4 py-3 flex items-center gap-3";
-            icon.className = "fas fa-check-circle text-green-500";
-        } else if(type === 'error') {
-            toast.firstElementChild.className = "bg-white border-l-4 border-red-500 shadow-lg rounded px-4 py-3 flex items-center gap-3";
-            icon.className = "fas fa-exclamation-triangle text-red-500";
-        }
-        
-        toast.classList.remove('translate-x-full', 'opacity-0');
-        setTimeout(() => {
-            toast.classList.add('translate-x-full', 'opacity-0');
-        }, 3000);
+    const fieldLabels = {
+        receivedDate: 'Tanggal diterima', letterNumber: 'Nomor surat', letterDate: 'Tanggal surat', sender: 'Asal surat',
+        subject: 'Perihal', documentDescription: 'Uraian berkas', disposition: 'Isi disposisi',
+        dispositionTargets: 'Tujuan disposisi', parafDateOrNote: 'Keterangan / tanggal paraf',
+        letterPosition: 'Posisi surat', followupNote: 'Keterangan tindak lanjut'
+    };
+
+    function selectedPositions() {
+        const select = document.getElementById('positions');
+        return [...select.selectedOptions].map(option => option.value);
     }
 
-    function updateClock() {
-        const now = new Date();
-        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        document.getElementById('currentDate').textContent = now.toLocaleDateString('id-ID', options);
-    }
-    setInterval(updateClock, 60000);
-    updateClock();
-
-    // --- NAVIGATION & UI LOGIC ---
-    function navigate(viewId) {
-        // Update menu active state
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.classList.remove('text-blue-700', 'bg-blue-50');
-            btn.classList.add('text-gray-600', 'hover:bg-gray-100');
+    function renderPositions(positions) {
+        const select = document.getElementById('positions');
+        const previous = new Set(selectedPositions());
+        select.replaceChildren();
+        positions.forEach(position => {
+            const option = document.createElement('option');
+            option.value = position;
+            option.textContent = position || 'Belum diisi';
+            option.selected = listState.positions === undefined || previous.has(position);
+            select.append(option);
         });
-        const activeBtn = document.getElementById(`nav-${viewId}`);
-        if(activeBtn) {
-            activeBtn.classList.remove('text-gray-600', 'hover:bg-gray-100');
-            activeBtn.classList.add('text-blue-700', 'bg-blue-50');
-        }
-
-        // Hide all sections
-        document.querySelectorAll('.section-content').forEach(sec => sec.classList.add('hidden'));
-        
-        // Show target section
-        const targetSec = document.getElementById(`sec-${viewId}`);
-        if(targetSec) targetSec.classList.remove('hidden');
-
-        // Update Title
-        document.getElementById('pageTitle').textContent = viewNames[viewId];
-
-        // Trigger Load Data
-        if(viewId === 'dashboard') loadDashboard();
-        if(viewId === 'surat-masuk') loadDataSuratMasuk();
-    }
-
-    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
-    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-
-    // --- AUTHENTICATION ---
-    async function handleLogin(e) {
-        e.preventDefault();
-        const user = document.getElementById('username').value;
-        const pass = document.getElementById('password').value;
-        const btn = document.getElementById('loginBtn');
-        const alertBox = document.getElementById('loginAlert');
-        
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
-        btn.disabled = true;
-        alertBox.classList.add('hidden');
-
-        try {
-            const res = await runGoogleScript('checkLogin', user, pass);
-            if (res.success) {
-                currentUser = res.user;
-                document.getElementById('loginView').classList.add('hidden');
-                document.getElementById('mainView').classList.remove('hidden');
-                
-                // Set User info
-                document.getElementById('userNameDisplay').textContent = currentUser.name;
-                document.getElementById('userRoleDisplay').textContent = currentUser.role;
-                document.getElementById('userAvatar').textContent = currentUser.name.charAt(0).toUpperCase();
-                
-                navigate('dashboard');
-            } else {
-                alertBox.classList.remove('hidden');
-                document.getElementById('loginAlertText').textContent = res.message;
-            }
-        } catch (error) {
-            alertBox.classList.remove('hidden');
-            document.getElementById('loginAlertText').textContent = "Koneksi terputus/Gagal.";
-        } finally {
-            btn.innerHTML = '<span>Masuk Sistem</span>';
-            btn.disabled = false;
+        if (listState.positions !== undefined) {
+            [...select.options].forEach(option => { option.selected = listState.positions.includes(option.value); });
         }
     }
 
-    function handleLogout() {
-        currentUser = null;
-        document.getElementById('mainView').classList.add('hidden');
-        document.getElementById('loginView').classList.remove('hidden');
-        document.getElementById('loginForm').reset();
+    function renderRecord(record) {
+        const article = document.createElement('article');
+        article.className = 'grid gap-2 py-4 sm:grid-cols-[1fr_auto] sm:items-center';
+        const summary = document.createElement('div');
+        const title = document.createElement('h3');
+        title.className = 'font-semibold text-gray-900';
+        title.textContent = `${record.agenda || 'Belum diisi'} · ${record.subject || 'Belum diisi'}`;
+        const subline = document.createElement('p');
+        subline.className = 'mt-1 text-sm text-gray-600';
+        subline.textContent = [record.receivedDate || 'Belum diisi', record.letterNumber || 'Belum diisi', record.sender || 'Belum diisi', record.letterPosition || 'Belum diisi'].join(' · ');
+        summary.append(title, subline);
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'justify-self-start rounded border border-blue-700 px-3 py-2 text-sm text-blue-800';
+        button.textContent = 'Lihat detail';
+        button.addEventListener('click', () => loadDetail(record));
+        article.append(summary, button);
+        return article;
     }
 
-    // --- DATA FETCHING ---
-    async function loadDashboard() {
-        try {
-            const res = await runGoogleScript('getDashboardStats');
-            const data = JSON.parse(res);
-            if(!data.error) {
-                document.getElementById('statMasuk').textContent = data.suratMasuk;
-                document.getElementById('statKeluar').textContent = data.suratKeluar;
-                document.getElementById('statTL').textContent = data.perluTindakLanjut;
-            }
-        } catch(e) {
-            console.error(e);
+    function loadRecords() {
+        const status = document.getElementById('listStatus');
+        const list = document.getElementById('recordList');
+        const pager = document.getElementById('pagination');
+        status.textContent = 'Memuat daftar...';
+        list.replaceChildren();
+        pager.classList.add('hidden');
+        runGoogleScript('getSuratMasuk', { keyword: listState.keyword, positions: listState.positions, page: listState.page })
+            .then(result => {
+                if (!result || !result.success) {
+                    status.textContent = result && result.message || 'Daftar surat tidak dapat dimuat.';
+                    return;
+                }
+                renderPositions(result.positions || []);
+                listState.page = result.page;
+                listState.pageCount = Math.max(1, Math.ceil(result.total / result.pageSize));
+                result.records.forEach(record => list.append(renderRecord(record)));
+                status.textContent = result.total ? `${result.total} pencatatan ditemukan.` : 'Tidak ada data yang cocok.';
+                const warning = document.getElementById('warningStatus');
+                warning.textContent = result.warningCount ? `${result.warningCount} baris dilewati karena data tidak dapat dibaca.` : '';
+                warning.classList.toggle('hidden', !result.warningCount);
+                document.getElementById('pageStatus').textContent = `Halaman ${listState.page} dari ${listState.pageCount}`;
+                document.getElementById('previousPage').disabled = listState.page <= 1;
+                document.getElementById('nextPage').disabled = listState.page >= listState.pageCount;
+                pager.classList.toggle('hidden', !result.total);
+            })
+            .catch(() => { status.textContent = 'Daftar surat gagal dimuat. Periksa koneksi lalu coba lagi.'; });
+    }
+
+    function loadDetail(reference) {
+        const panel = document.getElementById('detailPanel');
+        document.getElementById('detailTitle').textContent = 'Memuat detail...';
+        document.getElementById('detailAgenda').textContent = '';
+        document.getElementById('detailFields').replaceChildren();
+        panel.classList.remove('hidden');
+        runGoogleScript('getSuratDetail', { rowHint: reference.rowHint, agenda: reference.agenda, expectedHash: reference.expectedHash })
+            .then(result => {
+                if (!result || !result.success) {
+                    document.getElementById('detailTitle').textContent = result && result.message || 'Detail surat tidak dapat dimuat.';
+                    return;
+                }
+                const record = result.record;
+                document.getElementById('detailTitle').textContent = record.subject || 'Perihal belum diisi';
+                document.getElementById('detailAgenda').textContent = `Nomor agenda: ${record.agenda || 'Belum diisi'}`;
+                const fields = document.getElementById('detailFields');
+                Object.entries(fieldLabels).forEach(([key, label]) => {
+                    const wrapper = document.createElement('div');
+                    const term = document.createElement('dt');
+                    term.className = 'text-sm font-semibold text-gray-700';
+                    term.textContent = label;
+                    const value = document.createElement('dd');
+                    value.className = 'mt-1 whitespace-pre-wrap break-words text-sm text-gray-800';
+                    value.textContent = record[key] || 'Belum diisi';
+                    wrapper.append(term, value);
+                    fields.append(wrapper);
+                });
+                [['letterFileReference', 'Berkas surat'], ['followupReference', 'Berkas / catatan tindak lanjut']].forEach(([key, label]) => {
+                    const wrapper = document.createElement('div');
+                    const term = document.createElement('dt');
+                    term.className = 'text-sm font-semibold text-gray-700';
+                    term.textContent = label;
+                    const value = document.createElement('dd');
+                    value.className = 'mt-1 text-sm';
+                    const links = record.links && record.links[key] || [];
+                    if (links.length) links.forEach(link => {
+                        const anchor = document.createElement('a');
+                        anchor.href = link.url;
+                        anchor.target = '_blank';
+                        anchor.rel = 'noopener noreferrer';
+                        anchor.className = 'mr-3 text-blue-700 underline';
+                        anchor.textContent = link.label || link.url;
+                        value.append(anchor);
+                    });
+                    else value.textContent = record[key] || 'Belum diisi';
+                    wrapper.append(term, value);
+                    fields.append(wrapper);
+                });
+                panel.focus();
+            })
+            .catch(() => { document.getElementById('detailTitle').textContent = 'Detail surat gagal dimuat. Coba muat ulang daftar.'; });
+    }
+
+    function loadInitialRegister() {
+        document.getElementById('listStatus').textContent = 'Masukkan kata kunci pencarian.';
+        runGoogleScript('getInitialData')
+            .then(result => {
+                if (!result || !result.success) {
+                    document.getElementById('listStatus').textContent = result && result.message || 'Data awal tidak dapat dimuat.';
+                    return;
+                }
+                renderPositions(result.positions || []);
+                document.getElementById('warningStatus').textContent = '';
+                if (result.warningCount) {
+                    const warning = document.getElementById('warningStatus');
+                    warning.textContent = `${result.warningCount} baris dilewati karena data tidak dapat dibaca.`;
+                    warning.classList.remove('hidden');
+                }
+            })
+            .catch(() => { document.getElementById('listStatus').textContent = 'Data awal gagal dimuat. Periksa koneksi lalu coba lagi.'; });
+    }
+
+    function initializeAppStatus() {
+        if (statusRequestPending) return;
+        statusRequestPending = true;
+        const status = document.getElementById('accessStatus');
+        const retry = document.getElementById('retryAccess');
+        const identity = document.getElementById('accessIdentity');
+        const main = document.getElementById('mainView');
+        const login = document.getElementById('loginView');
+        retry.classList.add('hidden');
+        status.className = 'mb-4 rounded-lg bg-blue-50 p-4 text-sm text-blue-900';
+        status.textContent = 'Memeriksa akses akun Google...';
+
+        runGoogleScript('getAppStatus')
+            .then(result => {
+                if (!result || !result.success) {
+                    status.className = 'mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-800';
+                    status.textContent = result && result.message || 'Status akses tidak dapat diverifikasi.';
+                    retry.classList.remove('hidden');
+                    return;
+                }
+                document.getElementById('userNameDisplay').textContent = result.email;
+                document.getElementById('userRoleDisplay').textContent = result.role === 'WRITE' ? 'Pencatat' : 'Pembaca';
+                identity.textContent = result.email;
+                login.classList.add('hidden');
+                main.classList.remove('hidden');
+                loadInitialRegister();
+            })
+            .catch(() => {
+                status.className = 'mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-800';
+                status.textContent = 'Status akses gagal diperiksa. Pastikan aplikasi dibuka melalui deployment Google Apps Script.';
+                retry.classList.remove('hidden');
+            })
+            .finally(() => { statusRequestPending = false; });
+    }
+
+    document.getElementById('searchForm').addEventListener('submit', event => {
+        event.preventDefault();
+        listState.keyword = document.getElementById('keyword').value.trim();
+        listState.positions = selectedPositions();
+        listState.page = 1;
+        if (!listState.keyword) {
+            document.getElementById('listStatus').textContent = 'Masukkan kata kunci pencarian.';
+            document.getElementById('recordList').replaceChildren();
+            document.getElementById('pagination').classList.add('hidden');
+            return;
         }
-    }
+        loadRecords();
+    });
+    document.getElementById('resetSearch').addEventListener('click', () => {
+        document.getElementById('keyword').value = '';
+        listState = { keyword: '', positions: undefined, page: 1, pageCount: 1 };
+        renderPositions([...document.getElementById('positions').options].map(option => option.value));
+        document.getElementById('recordList').replaceChildren();
+        document.getElementById('listStatus').textContent = 'Masukkan kata kunci pencarian.';
+        document.getElementById('pagination').classList.add('hidden');
+    });
+    document.getElementById('reload').addEventListener('click', () => { if (listState.keyword) loadRecords(); else loadInitialRegister(); });
+    document.getElementById('previousPage').addEventListener('click', () => { if (listState.page > 1) { listState.page--; loadRecords(); } });
+    document.getElementById('nextPage').addEventListener('click', () => { if (listState.page < listState.pageCount) { listState.page++; loadRecords(); } });
+    document.getElementById('closeDetail').addEventListener('click', () => {
+        document.getElementById('detailPanel').classList.add('hidden');
+        document.getElementById('recordList').querySelector('button')?.focus();
+    });
 
-    async function loadDataSuratMasuk() {
-        const tbody = document.getElementById('tableBodySuratMasuk');
-        tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i> Memuat data...</td></tr>';
-        
-        try {
-            const res = await runGoogleScript('getSuratMasuk');
-            const data = JSON.parse(res);
-            
-            if(data.error) {
-                tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-red-500">Gagal memuat data: ${data.error}</td></tr>`;
-                return;
-            }
-
-            if(data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-gray-500">Belum ada data surat masuk.</td></tr>`;
-                document.getElementById('infoTotalMasuk').textContent = 'Menampilkan 0 data';
-                return;
-            }
-
-            document.getElementById('infoTotalMasuk').textContent = `Menampilkan ${data.length} data`;
-            
-            // Render rows (menampilkan field kunci agar rapi, detail di modal nanti)
-            let html = '';
-            data.forEach(item => {
-                // Mengambil property sesuai header (Bisa disesuaikan jika nama header beda spasi dll)
-                const noAgenda = item['Nomor Agenda'] || '-';
-                const tgl = item['Tanggal Di Terima'] ? new Date(item['Tanggal Di Terima']).toLocaleDateString('id-ID') : '-';
-                const noSurat = item['No. Surat'] || '-';
-                const asal = item['Asal Surat'] || '-';
-                // Batasi panjang perihal
-                let perihal = item['Perihal'] || '-';
-                if(perihal.length > 30) perihal = perihal.substring(0,30) + '...';
-                
-                const posisi = item['Posisi Surat'] || '-';
-
-                html += `
-                    <tr class="hover:bg-blue-50 transition-colors group">
-                        <td class="px-4 py-3 font-medium text-gray-800">${noAgenda}</td>
-                        <td class="px-4 py-3 text-gray-600">${tgl}</td>
-                        <td class="px-4 py-3 text-gray-600">${noSurat}</td>
-                        <td class="px-4 py-3 text-gray-600">${asal}</td>
-                        <td class="px-4 py-3 text-gray-600">${perihal}</td>
-                        <td class="px-4 py-3"><span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs border border-gray-200">${posisi}</span></td>
-                        <td class="px-4 py-3 text-center">
-                            <button class="text-blue-500 hover:text-blue-700 mx-1" title="Detail"><i class="fas fa-eye"></i></button>
-                            <button class="text-green-500 hover:text-green-700 mx-1" title="Edit"><i class="fas fa-edit"></i></button>
-                        </td>
-                    </tr>
-                `;
-            });
-            tbody.innerHTML = html;
-
-        } catch(e) {
-            tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-red-500">Terjadi kesalahan sistem.</td></tr>`;
-        }
-    }
-
-    async function handleSaveSuratMasuk(e) {
-        e.preventDefault();
-        const btn = document.getElementById('btnSimpanSurat');
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
-        btn.disabled = true;
-
-        const payload = {
-            nomorAgenda: document.getElementById('fm_agenda').value,
-            tglDiterima: document.getElementById('fm_tglTerima').value,
-            noSurat: document.getElementById('fm_noSurat').value,
-            tglSurat: document.getElementById('fm_tglSurat').value,
-            asalSurat: document.getElementById('fm_asalSurat').value,
-            perihal: document.getElementById('fm_perihal').value,
-            uraian: document.getElementById('fm_uraian').value,
-            isiDisposisi: document.getElementById('fm_isiDispo').value,
-            tujuanDispo: document.getElementById('fm_tujuanDispo').value,
-            ketParaf: document.getElementById('fm_ketParaf').value,
-            linkBerkas: document.getElementById('fm_linkBerkas').value,
-            posisiSurat: document.getElementById('fm_posisi').value,
-            ketTindakLanjut: document.getElementById('fm_ketTL').value,
-            linkBerkasTL: document.getElementById('fm_linkTL').value
-        };
-
-        try {
-            const res = await runGoogleScript('saveSuratMasuk', payload);
-            if(res.success) {
-                showToast(res.message, 'success');
-                closeModal('modalTambahSurat');
-                document.getElementById('formSuratMasuk').reset();
-                loadDataSuratMasuk(); // Refresh table
-                loadDashboard(); // Refresh stats
-            } else {
-                showToast(res.message, 'error');
-            }
-        } catch(e) {
-            showToast("Gagal terhubung ke server.", 'error');
-        } finally {
-            btn.innerHTML = '<i class="fas fa-save"></i> Simpan Data';
-            btn.disabled = false;
-        }
-    }
+    document.addEventListener('DOMContentLoaded', initializeAppStatus);
 </script>
 
 </body>
