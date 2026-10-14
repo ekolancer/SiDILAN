@@ -517,21 +517,24 @@ function createSuratMasuk(payload) {
         throw warning;
       }
       const agenda = nextAgenda_(register.sheet, register.records);
-      const row = findSafeTemplateRow_(register.sheet, register.records);
+      const templateRow = findSafeTemplateRow_(register.sheet, register.records);
+      const row = templateRow || safeInsertRow_(register.sheet, register.records);
       if (!row) throw new Error('NO_SAFE_ROW');
       const values = buildNewRow_(payload, agenda);
       const sheetId = register.sheet.getSheetId();
-      Sheets.Spreadsheets.batchUpdate({
-        requests: [{
-          updateCells: {
-            range: { sheetId, startRowIndex: row - 1, endRowIndex: row, startColumnIndex: 0, endColumnIndex: FIELD_NAMES_.length },
-            rows: [{ values: values.map((value, index) => ({ userEnteredValue: index === 1 || (index === 3 && value !== '')
-              ? { numberValue: value }
-              : value === '' ? {} : { stringValue: String(value) } })) }],
-            fields: 'userEnteredValue'
-          }
-        }]
-      }, config.spreadsheetId);
+      const requests = [];
+      if (!templateRow) requests.push({ insertDimension: {
+        range: { sheetId, dimension: 'ROWS', startIndex: row - 1, endIndex: row },
+        inheritFromBefore: true
+      } });
+      requests.push({ updateCells: {
+        range: { sheetId, startRowIndex: row - 1, endRowIndex: row, startColumnIndex: 0, endColumnIndex: FIELD_NAMES_.length },
+        rows: [{ values: values.map((value, index) => ({ userEnteredValue: index === 1 || (index === 3 && value !== '')
+          ? { numberValue: value }
+          : value === '' ? {} : { stringValue: String(value) } })) }],
+        fields: 'userEnteredValue'
+      } });
+      Sheets.Spreadsheets.batchUpdate({ requests }, config.spreadsheetId);
       SpreadsheetApp.flush();
       return { success: true, agenda, rowHint: row };
     } finally {
@@ -591,21 +594,32 @@ function findSafeTemplateRow_(sheet, records) {
   const lastRecordRow = records.reduce((max, record) => Math.max(max, record.rowHint), 1);
   const lastRow = sheet.getLastRow();
   if (lastRecordRow >= lastRow) return null;
-  const mergedRanges = sheet.getRange(1, 1, lastRow, Math.max(FIELD_NAMES_.length, sheet.getLastColumn())).getMergedRanges();
+  const width = Math.max(FIELD_NAMES_.length, sheet.getLastColumn());
+  const mergedRanges = sheet.getRange(1, 1, lastRow, width).getMergedRanges();
+  const occupiedAgenda = new Set(records.map(record => String(record.agenda).trim()));
   for (let row = lastRecordRow + 1; row <= lastRow; row++) {
     if (mergedRanges.some(range => row >= range.getRow() && row <= range.getLastRow())) continue;
-    const range = sheet.getRange(row, 1, 1, Math.max(FIELD_NAMES_.length, sheet.getLastColumn()));
+    const range = sheet.getRange(row, 1, 1, width);
     const values = range.getValues()[0];
     const formulas = range.getFormulas()[0];
     const notes = range.getNotes()[0];
+    const agenda = String(values[0] == null ? '' : values[0]).trim();
+    if (!/^\d+$/.test(agenda) || !values[6] || typeof values[6] !== 'string' || occupiedAgenda.has(agenda)) continue;
     const hasUnsafeContent = values.some((value, index) => value !== '' && index !== 0 && index !== 6) ||
       formulas.some(Boolean) || notes.some(Boolean);
-    if (hasUnsafeContent) continue;
-    if (!/^\d+$/.test(String(values[0]).trim())) continue;
-    if (values[6] !== '' && typeof values[6] !== 'string') continue;
-    return row;
+    if (!hasUnsafeContent) return row;
   }
   return null;
+}
+
+function safeInsertRow_(sheet, records) {
+  const lastRecordRow = records.reduce((max, record) => Math.max(max, record.rowHint), 1);
+  if (lastRecordRow < 2) return 2;
+  const width = Math.max(FIELD_NAMES_.length, sheet.getLastColumn());
+  const mergedRanges = sheet.getRange(1, 1, sheet.getLastRow(), width).getMergedRanges();
+  const insertAfter = Math.max(...records.map(record => record.rowHint));
+  if (mergedRanges.some(range => insertAfter >= range.getRow() && insertAfter <= range.getLastRow())) return null;
+  return insertAfter + 1;
 }
 
 function buildNewRow_(payload, agenda) {
