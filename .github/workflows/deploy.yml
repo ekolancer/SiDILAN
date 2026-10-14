@@ -1,5 +1,12 @@
 name: Deploy to Apps Script
 
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-script-deployment
+  cancel-in-progress: false
+
 on:
   push:
     branches:
@@ -36,10 +43,19 @@ jobs:
             exit 1
           fi
           printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
-          echo "Credentials tersimpan. Cek struktur (tanpa bocorkan token):"
-          node -e "const c=require(process.env.HOME+'/.clasprc.json'); const k=Object.keys(c.tokens||{}); console.log('token keys:', k); console.log('has refresh_token:', !!c.tokens?.[k[0]]?.refresh_token);"
+          chmod 600 "$HOME/.clasprc.json"
         env:
           CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+
+      - name: Check deployment target
+        env:
+          DEPLOYMENT_ID: ${{ secrets.DEPLOYMENT_ID }}
+        run: |
+          if [ -z "$DEPLOYMENT_ID" ]; then
+            echo "::error::Secret DEPLOYMENT_ID wajib diisi agar workflow memperbarui deployment tetap."
+            exit 1
+          fi
+          clasp status
 
       - name: Push code to Apps Script
         run: clasp push --force
@@ -48,9 +64,5 @@ jobs:
         env:
           DEPLOYMENT_ID: ${{ secrets.DEPLOYMENT_ID }}
         run: |
-          if [ -z "$DEPLOYMENT_ID" ]; then
-            echo "::error::Secret DEPLOYMENT_ID wajib diisi agar workflow memperbarui deployment tetap."
-            exit 1
-          fi
           VERSION_DESC="Deploy from GitHub ${GITHUB_SHA:0:7} by ${GITHUB_ACTOR}"
           clasp deploy --deploymentId "$DEPLOYMENT_ID" --description "$VERSION_DESC"

@@ -13,3 +13,33 @@ body { min-width: 320px; min-height: 100vh; margin: 0; }
 button, input, select { font: inherit; }
 button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid #1263a0; outline-offset: 2px; }
 ::selection { color: #fff; background: #1263a0; }
+
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: 1rem; }
+.summary-grid > div { border-top: 1px solid #cbd5e1; padding-top: .8rem; }
+.summary-grid dt { color: #334155; font-size: .875rem; }
+.summary-grid dd { margin-top: .2rem; color: #172b4d; font-size: clamp(1.8rem, 3vw, 2.5rem); font-weight: 650; font-variant-numeric: tabular-nums; }
+.dashboard-columns { display: grid; gap: 2rem; }
+.report-scroll { max-width: 100%; overflow: auto; border: 1px solid #cbd5e1; border-radius: .5rem; }
+.report-scroll:focus-visible { outline: 2px solid #1263a0; outline-offset: 2px; }
+.report-table { width: 100%; border-collapse: collapse; font-size: .8rem; line-height: 1.4; }
+.report-table th, .report-table td { min-width: 10rem; max-width: 18rem; padding: .7rem; border: 1px solid #cbd5e1; text-align: left; vertical-align: top; overflow-wrap: anywhere; white-space: pre-wrap; }
+.report-table th { background: #edf3f8; color: #172b4d; font-weight: 650; }
+.report-table tr:nth-child(even) { background: #f8fafc; }
+.report-print-heading { display: none; }
+@media (min-width: 768px) { .dashboard-columns { grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); } }
+@media print {
+  @page { size: A3 landscape; margin: 9mm; }
+  :root, body { background: white; color: black; }
+  header, .report-controls, .report-scroll + p { display: none !important; }
+  main { max-width: none !important; padding: 0 !important; }
+  .report-section { border: 0; padding: 0; box-shadow: none; }
+  .report-print-heading { display: block; margin-bottom: 4mm; font-size: 9pt; overflow-wrap: anywhere; }
+  .report-print-heading h2 { margin: 0; font-size: 15pt; }
+  .report-print-heading p { margin: 2mm 0; }
+  .report-scroll { overflow: visible; border: 0; }
+  .report-table { table-layout: fixed; font-size: 6pt; line-height: 1.15; }
+  .report-table th, .report-table td { min-width: 0; max-width: none; padding: 1mm; border: 1px solid #777; }
+  .report-table th { background: #eee; }
+  .report-table tr { break-inside: avoid; }
+  .report-table thead { display: table-header-group; }
+}

@@ -21,4 +21,29 @@ context.PropertiesService = { getScriptProperties: () => ({ getProperties: () =>
 context.Session = { getActiveUser: () => ({ getEmail: () => 'reader@example.com' }) };
 const result = context.getSuratMasuk({ keyword: 'test' });
 assert.deepEqual(JSON.parse(JSON.stringify(result)), { success: false, error: 'SHEET_UNAVAILABLE', message: 'Spreadsheet tidak dapat dibaca oleh akun ini.' });
-console.log('read contract checks passed');
+
+const validCreate = {
+  receivedDate: '2026-10-14', letterNumber: '001/ABC', sender: 'Unit Uji', subject: 'Surat uji',
+  letterDate: '2026-10-13', disposition: '', dispositionTargets: '', parafDateOrNote: '',
+  letterFileReference: '', letterPosition: '', followupNote: '', followupReference: ''
+};
+context.validateCreatePayload_(validCreate);
+assert.throws(() => context.validateCreatePayload_({ ...validCreate, receivedDate: '2026-02-30' }), /VALIDATION_ERROR/);
+assert.throws(() => context.validateCreatePayload_({ ...validCreate, letterFileReference: 'javascript:alert(1)' }), /VALIDATION_ERROR/);
+assert.throws(() => context.validateCreatePayload_({ ...validCreate, subject: '   ' }), /VALIDATION_ERROR/);
+const newRow = context.buildNewRow_(validCreate, '355');
+assert.equal(newRow[0], '355');
+assert.equal(newRow[1], 46309);
+assert.equal(newRow[2], '001/ABC');
+assert.equal(newRow[3], 46308);
+assert.match(newRow[6], /13 Oktober 2026/);
+assert.equal(context.findDuplicateCandidates_([{ agenda: '354.a', letterNumber: '001/ABC', sender: 'Unit Uji', subject: 'Surat uji' }], validCreate).length, 1);
+
+const validUpdate = { rowHint: 12, agenda: '354.a', expectedHash: 'snapshot-hash', changes: { followupNote: 'Tindak lanjut baru' } };
+context.validateUpdatePayload_(validUpdate);
+assert.throws(() => context.validateUpdatePayload_({ ...validUpdate, changes: { agenda: '1' } }), /VALIDATION_ERROR/);
+assert.throws(() => context.validateChangedFields_({ sender: ' ' }, { sender: 'Asal lama' }), /VALIDATION_ERROR/);
+assert.throws(() => context.validateChangedFields_({ letterFileReference: 'javascript:alert(1)' }, { letterFileReference: '' }), /VALIDATION_ERROR/);
+const viewerUpdate = context.updateSuratMasuk(validUpdate);
+assert.equal(JSON.parse(JSON.stringify(viewerUpdate)).error, 'ACCESS_DENIED');
+console.log('read, create and edit contract checks passed');

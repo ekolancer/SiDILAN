@@ -1,8 +1,11 @@
 # CI/CD GitHub Actions → Google Apps Script
 
 Setiap `git push` ke branch `main` akan otomatis:
-1. Push kode ke project Apps Script (`clasp push`)
-2. Membuat versi baru + deploy ke Web App (`clasp deploy`)
+1. Menjalankan tes dan build Vue/Vite menjadi `Index.html` untuk HTML Service.
+2. Push kode ke project Apps Script (`clasp push`).
+3. Membuat versi baru pada deployment yang ditentukan (`clasp deploy`).
+
+Sebelum push ke `main`, pastikan `.clasp.json`, `SPREADSHEET_ID` pada Script Properties, dan secret `DEPLOYMENT_ID` semuanya menunjuk project/spreadsheet **salinan uji**. Workflow akan merilis kode secara otomatis; keberhasilan build tidak membuktikan target aman.
 
 ## Yang perlu kamu set sekali saja
 
@@ -36,11 +39,7 @@ Ini membuat file `~/.clasprc.json`. Isinya kira-kira:
 }
 ```
 
-Lihat isinya:
-
-```bash
-cat ~/.clasprc.json
-```
+Simpan file tersebut secara lokal; jangan menampilkan isinya di log atau terminal yang dibagikan.
 
 ### 2. Set GitHub Secrets
 
@@ -51,9 +50,9 @@ Buat 2 secret:
 | Nama Secret | Isi |
 |-------------|-----|
 | `CLASPRC_JSON` | Seluruh isi file `~/.clasprc.json` (paste apa adanya) |
-| `DEPLOYMENT_ID` | `AKfycbz-bdXUWk0txWhgB2uwubKYbFLtqAjEdaaq1ZkINySaZo0OZcHCKXaJOZm0xbSsrNer` |
+| `DEPLOYMENT_ID` | ID deployment Web App uji yang disetujui, diambil dari Manage deployments |
 
-> `DEPLOYMENT_ID` adalah ID deployment Web App kamu yang sekarang (`SiDILAN v1`).
+> `DEPLOYMENT_ID` harus menunjuk ke deployment Web App uji yang benar.
 > Dengan menyetel ini, setiap deploy akan **update deployment yang sama** sehingga
 > **URL Web App tidak berubah**.
 
@@ -74,7 +73,8 @@ Setelah push, buka tab **Actions** di GitHub. Kamu akan lihat workflow
 
 - Trigger: `push` ke `main`, plus tombol manual (`workflow_dispatch`).
 - Kredensial clasp ditulis ke `~/.clasprc.json` dari secret `CLASPRC_JSON`.
-- `clasp push --force` mengirim kode.
+- `npm ci`, `npm test`, dan `npm run test:build` wajib lulus sebelum push.
+- `clasp push --force` mengirim kode; `DEPLOYMENT_ID` kosong menghentikan workflow sebelum push.
 - `clasp deploy --deploymentId "$DEPLOYMENT_ID"` membuat versi baru pada
   deployment yang sama → URL web app tetap.
 - Deskripsi versi mencantumkan commit SHA + user yang trigger, biar mudah dilacak.
@@ -89,6 +89,12 @@ Setelah push, buka tab **Actions** di GitHub. Kamu akan lihat workflow
 - **Jangan commit** `~/.clasprc.json` (sudah masuk `.gitignore`).
 - `scriptId` di `.clasp.json` bukan rahasia — aman di-commit (dan memang sudah
   ke-track), supaya CI tahu target project.
+
+## Rollback deployment uji
+
+Jika hasil uji gagal, jangan mengubah spreadsheet untuk rollback kode. Buka **Deploy → Manage deployments**, pilih deployment uji yang ID-nya sesuai `DEPLOYMENT_ID`, lalu pilih kembali versi yang sebelumnya lulus dan klik **Deploy**. URL `/exec` tetap sama. Hentikan push berikutnya ke `main` sampai penyebab gagal diperbaiki; workflow otomatis akan membuat versi baru jika ada push. Rollback kode tidak membatalkan perubahan data yang telanjur disimpan.
+
+Production membutuhkan persetujuan terpisah atas target, akses, dan aktivasi tulis. Jangan mengganti `SPREADSHEET_ID` ke production hanya untuk pengujian.
 
 ## Troubleshooting
 
