@@ -1,6 +1,4 @@
 <script setup>
-import { cn } from '@/lib/utils'
-
 defineProps({ modelValue: { type: Array, default: () => [] }, options: { type: Array, default: () => [] } })
 const emit = defineEmits(['update:modelValue'])
 function update(event) {

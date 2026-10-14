@@ -326,7 +326,15 @@ function getDashboardStats() {
     const register = readRegister_(config);
     const records = register.records;
     const month = Utilities.formatDate(new Date(), 'Asia/Jakarta', 'yyyy-MM');
-    const positions = new Map();
+    const statusCounts = { selesai: 0, dalamProses: 0, lewatBatasWaktu: 0 };
+    const units = new Map();
+    const monthKeys = Array.from({ length: 12 }, (_, index) => {
+      const [year, monthNumber] = month.split('-').map(Number);
+      const date = new Date(Date.UTC(year, monthNumber - 12 + index, 1));
+      return date.toISOString().slice(0, 7);
+    });
+    const incoming = Object.fromEntries(monthKeys.map(key => [key, 0]));
+    let unclassifiedStatus = 0;
     let receivedThisMonth = 0;
     let unreadableDates = 0;
     let withDisposition = 0;
@@ -335,20 +343,60 @@ function getDashboardStats() {
       const date = record.receivedDateKey;
       if (!date) unreadableDates++;
       if (date && date.slice(0, 7) === month) receivedThisMonth++;
+      if (date && Object.hasOwn(incoming, date.slice(0, 7))) incoming[date.slice(0, 7)]++;
       if (!isPlaceholder_(record.disposition)) withDisposition++;
       if (!isPlaceholder_(record.followupNote)) withFollowup++;
-      const position = record.letterPosition || '';
-      positions.set(position, (positions.get(position) || 0) + 1);
+      const status = String(record.followupNote || '').trim().toLocaleLowerCase('id');
+      if (status === 'selesai') statusCounts.selesai++;
+      else if (status === 'dalam proses') statusCounts.dalamProses++;
+      else if (status === 'lewat batas waktu') statusCounts.lewatBatasWaktu++;
+      else unclassifiedStatus++;
+      const targets = new Set(String(record.dispositionTargets || '').split(/[,;]/).map(value => value.trim()).filter(value => !isPlaceholder_(value)));
+      targets.forEach(target => units.set(target, (units.get(target) || 0) + 1));
     });
+    const outgoing = readOutgoingTrend_(monthKeys);
     return {
       success: true, total: records.length, receivedThisMonth, unreadableDates,
-      withDisposition, withFollowup,
-      positions: [...positions].map(([label, count]) => ({ label, count })),
+      withDisposition, withFollowup, statusCounts, unclassifiedStatus,
+      unitCounts: [...units].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'id')),
+      trend: monthKeys.map(key => ({ month: key, incoming: incoming[key], outgoing: outgoing.counts?.[key] ?? null })),
+      outgoingUnavailable: outgoing.unavailable, outgoingUnreadableDates: outgoing.unreadableDates,
       latest: records.slice(-5).reverse(), warningCount: register.warningCount,
       loadedAt: Utilities.formatDate(new Date(), 'Asia/Jakarta', "yyyy-MM-dd'T'HH:mm:ss")
     };
   } catch (error) {
     return { success: false, ...safeError_(error) };
+  }
+}
+
+function readOutgoingTrend_(monthKeys) {
+  const properties = PropertiesService.getScriptProperties().getProperties();
+  const spreadsheetId = String(properties.OUTGOING_SPREADSHEET_ID || '').trim();
+  const sheetName = String(properties.OUTGOING_SHEET_NAME || '').trim();
+  if (!spreadsheetId || !sheetName) return { unavailable: true, unreadableDates: 0 };
+  try {
+    const sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
+    if (!sheet || !sheet.getLastColumn()) return { unavailable: true, unreadableDates: 0 };
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getDisplayValues()[0];
+    const index = headers.findIndex(header => normalizeHeader_(header) === normalizeHeader_('Tanggal Surat'));
+    if (index < 0) return { unavailable: true, unreadableDates: 0 };
+    const counts = Object.fromEntries(monthKeys.map(key => [key, 0]));
+    let unreadableDates = 0;
+    const rowCount = sheet.getLastRow() - 1;
+    if (rowCount > 0) {
+      const range = sheet.getRange(2, index + 1, rowCount, 1);
+      const values = range.getValues();
+      const displays = range.getDisplayValues();
+      values.forEach(([value], row) => {
+        if (isPlaceholder_(value) && isPlaceholder_(displays[row][0])) return;
+        const date = receivedDateKey_(value, displays[row][0]);
+        if (!date) unreadableDates++;
+        else if (Object.hasOwn(counts, date.slice(0, 7))) counts[date.slice(0, 7)]++;
+      });
+    }
+    return { counts, unavailable: false, unreadableDates };
+  } catch (error) {
+    return { unavailable: true, unreadableDates: 0 };
   }
 }
 

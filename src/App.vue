@@ -1,9 +1,11 @@
 <script setup>
 import { computed, nextTick, onMounted, ref } from 'vue'
-import { ChevronLeft, ChevronRight, ExternalLink, RotateCw, Search, X } from '@lucide/vue'
-import Button from '@/components/ui/Button.vue'
-import Input from '@/components/ui/Input.vue'
-import Select from '@/components/ui/Select.vue'
+import { CalendarDays, ChevronLeft, ChevronRight, ClipboardList, ExternalLink, FileChartColumn, FileText, Inbox, LayoutDashboard, RotateCw, Search, X } from '@lucide/vue'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import MultiSelect from '@/components/ui/MultiSelect.vue'
 import { callAppsScript } from '@/services/appsScript'
 import { csvRows } from '@/lib/csv'
 
@@ -11,7 +13,7 @@ const loadingStatus = ref(true)
 const statusError = ref('')
 const email = ref('')
 const role = ref('')
-const positions = ref([])
+const selectedPosition = ref(null)
 const allPositions = ref([])
 const keyword = ref('')
 const selectedPositions = ref([])
@@ -80,6 +82,27 @@ const reportQuery = computed(() => ({
   fromDate: fromDate.value, toDate: toDate.value,
 }))
 const reportIsCurrent = computed(() => report.value && JSON.stringify(reportQuery.value) === report.value.queryKey)
+const followupStatuses = computed(() => [
+  { key: 'selesai', label: 'Selesai', count: dashboard.value?.statusCounts?.selesai || 0 },
+  { key: 'dalamProses', label: 'Dalam Proses', count: dashboard.value?.statusCounts?.dalamProses || 0 },
+  { key: 'lewatBatasWaktu', label: 'Lewat Batas Waktu', count: dashboard.value?.statusCounts?.lewatBatasWaktu || 0 },
+])
+const classifiedTotal = computed(() => followupStatuses.value.reduce((sum, status) => sum + status.count, 0))
+const donutStyle = computed(() => {
+  const [done, active] = followupStatuses.value.map(status => classifiedTotal.value ? status.count / classifiedTotal.value * 100 : 0)
+  return { background: classifiedTotal.value ? `conic-gradient(#228c77 0% ${done}%, #dd8a20 ${done}% ${done + active}%, #bc594e ${done + active}% 100%)` : '#dce5ee' }
+})
+const unitCounts = computed(() => (dashboard.value?.unitCounts || []).slice(0, 8))
+const maxUnitCount = computed(() => Math.max(1, ...unitCounts.value.map(unit => unit.count)))
+const trendMax = computed(() => Math.max(1, ...(dashboard.value?.trend || []).flatMap(month => [month.incoming, month.outgoing || 0])))
+function trendPoints(key) {
+  const months = dashboard.value?.trend || []
+  return months.map((month, index) => `${40 + index * 48},${168 - (month[key] || 0) / trendMax.value * 130}`).join(' ')
+}
+function trendLabel(month) {
+  const [year, number] = month.split('-').map(Number)
+  return new Intl.DateTimeFormat('id-ID', { month: 'short', year: '2-digit', timeZone: 'UTC' }).format(new Date(Date.UTC(year, number - 1, 1)))
+}
 
 async function loadInitial() {
   loadingStatus.value = true
@@ -110,7 +133,6 @@ async function loadPositions() {
       return
     }
     allPositions.value = result.positions || []
-    positions.value = [...allPositions.value]
     reportPositions.value = [...allPositions.value]
     warningCount.value = result.warningCount || 0
   } catch (error) {
@@ -135,7 +157,7 @@ async function search(resetPage = true, preserveDetail = false) {
   try {
     const result = await callAppsScript('getSuratMasuk', {
       keyword: trimmed,
-      positions: [...positions.value],
+      positions: selectedPosition.value === null ? undefined : [selectedPosition.value === 0 ? '' : selectedPosition.value],
       page: page.value,
     })
     if (currentRequest !== requestId) return
@@ -159,7 +181,7 @@ async function search(resetPage = true, preserveDetail = false) {
 
 function resetSearch() {
   keyword.value = ''
-  positions.value = [...allPositions.value]
+  selectedPosition.value = null
   page.value = 1
   records.value = []
   total.value = 0
@@ -257,7 +279,7 @@ async function submitCreate(confirmDuplicate = false) {
     duplicateCandidates.value = []
     createForm.value = emptyCreateForm()
     keyword.value = result.agenda
-    positions.value = [...allPositions.value]
+    selectedPosition.value = null
     await search()
   } catch (error) {
     createError.value = 'Hasil simpan belum diketahui. Periksa daftar sebelum mencoba lagi.'
@@ -367,19 +389,30 @@ onMounted(loadInitial)
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50 text-slate-900">
-    <header class="border-b border-slate-200 bg-white">
-      <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-        <p class="text-lg font-bold tracking-tight text-blue-900">SiDILAN <span class="font-normal text-slate-500">/ Surat Masuk</span></p>
-        <span v-if="role" class="text-sm text-slate-700">{{ role === 'WRITE' ? 'Pencatat' : 'Pembaca' }}</span>
+  <div class="app-shell min-h-dvh">
+    <a class="skip-link" href="#main-content">Lewati ke konten utama</a>
+    <aside class="app-sidebar print:hidden" aria-label="Menu SiDILAN">
+      <p class="app-wordmark">SiDILAN</p>
+      <nav v-if="!loadingStatus && !statusError" class="app-nav" aria-label="Navigasi utama">
+        <Button v-for="view in [['dashboard', 'Dashboard', LayoutDashboard], ['list', 'Daftar surat', Inbox], ['report', 'Rekap surat', FileChartColumn]]" :key="view[0]" variant="ghost" class="app-nav-link" :class="{ 'is-current': activeView === view[0] }" :aria-current="activeView === view[0] ? 'page' : undefined" @click="switchView(view[0])"><component :is="view[2]" aria-hidden="true" />{{ view[1] }}</Button>
+      </nav>
+      <p class="sidebar-caption">Sistem Digital Monitoring<br>Tindak Lanjut Surat</p>
+    </aside>
+    <header class="app-header print:hidden">
+      <div class="app-header-inner">
+        <div class="app-welcome"><p>Selamat datang</p><span>Register surat masuk</span></div>
+        <div v-if="role" class="app-account">
+          <span class="app-role">{{ role === 'WRITE' ? 'Pencatat' : 'Pembaca' }}</span>
+          <span v-if="email" class="app-email">{{ email }}</span>
+        </div>
       </div>
     </header>
 
-    <main class="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-      <p v-if="email" class="mb-4 text-sm text-slate-700 print:hidden">{{ email }}</p>
+    <main id="main-content" class="app-main" tabindex="-1">
 
-      <section v-if="loadingStatus" class="rounded-xl border border-slate-200 bg-white p-6" role="status" aria-live="polite">
-        Memeriksa akses akun Google...
+      <section v-if="loadingStatus" class="workspace-panel rounded-xl border border-slate-200 bg-white p-6" role="status" aria-live="polite" aria-label="Memeriksa akses akun Google">
+        <p class="text-sm font-medium text-slate-700">Memeriksa akses akun Google...</p>
+        <div class="skeleton-lines mt-6" aria-hidden="true"><span></span><span></span><span></span></div>
       </section>
       <section v-else-if="statusError" class="rounded-xl border border-red-200 bg-white p-6" role="alert">
         <h1 class="text-lg font-semibold">Akses aplikasi belum tersedia</h1>
@@ -388,50 +421,75 @@ onMounted(loadInitial)
       </section>
 
       <template v-else>
-        <nav class="mb-5 flex flex-wrap gap-2 print:hidden" aria-label="Navigasi utama">
-          <Button v-for="view in [['list', 'Daftar surat'], ['dashboard', 'Dashboard'], ['report', 'Rekap surat']]" :key="view[0]" :variant="activeView === view[0] ? 'default' : 'outline'" :aria-current="activeView === view[0] ? 'page' : undefined" @click="switchView(view[0])">{{ view[1] }}</Button>
-        </nav>
-
-        <section v-if="activeView === 'dashboard'" class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6" aria-labelledby="dashboard-title">
+        <section v-if="activeView === 'dashboard'" class="dashboard-view" aria-labelledby="dashboard-title">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <h1 id="dashboard-title" class="text-2xl font-semibold tracking-tight">Ringkasan surat masuk</h1>
             <Button variant="outline" :disabled="dashboardLoading" @click="loadDashboard"><RotateCw class="h-4 w-4" aria-hidden="true" /> Muat ulang</Button>
           </div>
           <p v-if="dashboardError" class="mt-4 text-sm text-red-800" role="alert">{{ dashboardError }}</p>
-          <p v-if="dashboardLoading" class="mt-4 text-sm text-slate-700" role="status">Memuat ringkasan...</p>
+          <div v-if="dashboardLoading" class="mt-6" role="status" aria-label="Memuat ringkasan surat"><p class="text-sm text-slate-700">Memuat ringkasan...</p><div class="skeleton-lines mt-4" aria-hidden="true"><span></span><span></span><span></span></div></div>
           <template v-if="dashboard">
             <p class="mt-2 text-sm text-slate-700">Data diperbarui {{ dashboard.loadedAt || '—' }} WIB</p>
             <dl class="summary-grid mt-6">
-              <div><dt>Total pencatatan</dt><dd>{{ dashboard.total }}</dd></div>
-              <div><dt>Diterima bulan ini (WIB)</dt><dd>{{ dashboard.receivedThisMonth }}</dd></div>
-              <div><dt>Memiliki isi disposisi (H)</dt><dd>{{ dashboard.withDisposition }}</dd></div>
-              <div><dt>Memiliki keterangan tindak lanjut (M)</dt><dd>{{ dashboard.withFollowup }}</dd></div>
+              <div class="metric-total"><dt><Inbox aria-hidden="true" /><span>Total pencatatan</span></dt><dd>{{ dashboard.total }}</dd></div>
+              <div class="metric-month"><dt><CalendarDays aria-hidden="true" /><span>Diterima bulan ini (WIB)</span></dt><dd>{{ dashboard.receivedThisMonth }}</dd></div>
+              <div class="metric-disposition"><dt><FileText aria-hidden="true" /><span>Memiliki isi disposisi (H)</span></dt><dd>{{ dashboard.withDisposition }}</dd></div>
+              <div class="metric-followup"><dt><ClipboardList aria-hidden="true" /><span>Memiliki keterangan tindak lanjut (M)</span></dt><dd>{{ dashboard.withFollowup }}</dd></div>
             </dl>
-            <p class="mt-5 text-sm text-amber-900" role="status">{{ dashboard.unreadableDates }} tanggal diterima tidak dapat dibaca; tidak dihitung dalam bulan berjalan.</p>
+            <p v-if="dashboard.unreadableDates" class="mt-5 text-sm text-amber-900" role="status">{{ dashboard.unreadableDates }} tanggal diterima tidak dapat dibaca; tidak dihitung dalam tren.</p>
             <p v-if="dashboard.warningCount" class="mt-1 text-sm text-amber-900">{{ dashboard.warningCount }} baris dilewati karena data tidak dapat dibaca.</p>
-            <div class="dashboard-columns mt-8">
-              <section aria-labelledby="positions-title">
-                <h2 id="positions-title" class="text-lg font-semibold">Posisi surat</h2>
-                <p v-if="!dashboard.positions?.length" class="mt-3 text-sm text-slate-700">Belum ada posisi surat.</p>
-                <dl v-else class="mt-3 divide-y divide-slate-200">
-                  <div v-for="position in dashboard.positions" :key="position.label" class="flex justify-between gap-4 py-2 text-sm"><dt class="break-words">{{ formatPosition(position.label) }}</dt><dd class="font-semibold tabular-nums">{{ position.count }}</dd></div>
-                </dl>
+            <div class="dashboard-charts mt-8">
+              <section class="dashboard-panel" aria-labelledby="status-chart-title">
+                <h2 id="status-chart-title" class="text-lg font-semibold">Status tindak lanjut</h2>
+                <p class="chart-note">Berdasarkan label persis pada Keterangan Tindak Lanjut.</p>
+                <div class="donut-layout mt-5">
+                  <div class="status-donut" :style="donutStyle" role="img" :aria-label="`Status tindak lanjut: ${followupStatuses.map(status => `${status.label} ${status.count}`).join(', ')}`"><div><strong>{{ classifiedTotal }}</strong><span>berstatus</span></div></div>
+                  <dl class="status-legend"><div v-for="status in followupStatuses" :key="status.key"><dt :class="`status-${status.key}`">{{ status.label }}</dt><dd>{{ status.count }}</dd></div></dl>
+                </div>
+                <p v-if="dashboard.unclassifiedStatus" class="chart-note mt-4">{{ dashboard.unclassifiedStatus }} surat tanpa salah satu dari tiga label tersebut tidak masuk donat.</p>
+                <p v-if="!classifiedTotal" class="chart-note mt-4">Belum ada status yang dapat digambarkan.</p>
               </section>
-              <section aria-labelledby="latest-title">
+              <section class="dashboard-panel" aria-labelledby="trend-chart-title">
+                <h2 id="trend-chart-title" class="text-lg font-semibold">Tren surat</h2>
+                <p class="chart-note">12 bulan terakhir berdasarkan tanggal diterima dan Tanggal Surat.</p>
+                <div class="trend-key mt-4"><span class="incoming-key">Surat Masuk</span><span v-if="!dashboard.outgoingUnavailable" class="outgoing-key">Surat Keluar</span></div>
+                <div v-if="dashboard.trend?.length" class="trend-scroll mt-3" tabindex="0" role="region" aria-label="Grafik tren surat 12 bulan, geser untuk melihat seluruh bulan">
+                  <svg class="trend-svg" viewBox="0 0 620 215" role="img" aria-label="Tren bulanan surat masuk dan surat keluar; angka lengkap tersedia pada tabel di bawah">
+                    <path v-for="line in [38, 103, 168]" :key="line" :d="`M 40 ${line} H 592`" class="trend-gridline" />
+                    <text x="8" y="42" class="trend-axis">{{ trendMax }}</text><text x="8" y="172" class="trend-axis">0</text>
+                    <polyline :points="trendPoints('incoming')" class="trend-incoming" />
+                    <polyline v-if="!dashboard.outgoingUnavailable" :points="trendPoints('outgoing')" class="trend-outgoing" />
+                    <g v-for="(month, index) in dashboard.trend" :key="month.month"><circle :cx="40 + index * 48" :cy="168 - month.incoming / trendMax * 130" r="3.5" class="trend-dot-incoming" /><circle v-if="!dashboard.outgoingUnavailable" :cx="40 + index * 48" :cy="168 - month.outgoing / trendMax * 130" r="3.5" class="trend-dot-outgoing" /><text :x="40 + index * 48" y="195" class="trend-month">{{ trendLabel(month.month) }}</text></g>
+                  </svg>
+                </div>
+                <details v-if="dashboard.trend?.length" class="trend-data"><summary>Lihat angka per bulan</summary><table><thead><tr><th scope="col">Bulan</th><th scope="col">Masuk</th><th scope="col">Keluar</th></tr></thead><tbody><tr v-for="month in dashboard.trend" :key="month.month"><th scope="row">{{ trendLabel(month.month) }}</th><td>{{ month.incoming }}</td><td>{{ month.outgoing ?? 'Belum tersedia' }}</td></tr></tbody></table></details>
+                <p v-if="dashboard.outgoingUnavailable" class="chart-note mt-3" role="status">Data Surat Keluar belum tersedia. Atur OUTGOING_SPREADSHEET_ID dan OUTGOING_SHEET_NAME pada Script Properties, lalu pastikan akun punya akses baca.</p>
+                <p v-else-if="dashboard.outgoingUnreadableDates" class="chart-note mt-3">{{ dashboard.outgoingUnreadableDates }} tanggal surat keluar tidak dapat dibaca; tidak dihitung dalam tren.</p>
+              </section>
+              <section class="dashboard-panel" aria-labelledby="units-chart-title">
+                <h2 id="units-chart-title" class="text-lg font-semibold">Surat per unit tujuan</h2>
+                <p class="chart-note">Berdasarkan Tujuan Disposisi; beberapa tujuan dihitung masing-masing.</p>
+                <p v-if="!unitCounts.length" class="empty-state mt-4 text-sm">Belum ada unit tujuan yang dicatat.</p>
+                <ol v-else class="unit-bars mt-5"><li v-for="unit in unitCounts" :key="unit.label"><span class="unit-label" :title="unit.label">{{ unit.label }}</span><div class="unit-track"><span class="unit-fill" :style="{ width: `${unit.count / maxUnitCount * 100}%` }"></span></div><strong>{{ unit.count }}</strong></li></ol>
+                <p v-if="dashboard.unitCounts?.length > 8" class="chart-note mt-4">Menampilkan 8 dari {{ dashboard.unitCounts.length }} unit dengan jumlah terbanyak.</p>
+              </section>
+            </div>
+            <div class="dashboard-columns mt-5">
+              <section class="dashboard-panel latest-panel" aria-labelledby="latest-title">
                 <h2 id="latest-title" class="text-lg font-semibold">Pencatatan terbaru</h2>
-                <p v-if="!dashboard.latest?.length" class="mt-3 text-sm text-slate-700">Belum ada pencatatan.</p>
-                <ol v-else class="mt-3 divide-y divide-slate-200">
-                  <li v-for="record in dashboard.latest" :key="`${record.rowHint}-${record.agenda}`" class="py-2 text-sm">
-                    <p class="break-words font-semibold">{{ display(record.agenda) }} · {{ display(record.subject) }}</p>
-                    <p class="mt-1 break-words text-slate-700">{{ display(record.receivedDate) }} · {{ display(record.sender) }} · {{ formatPosition(record.letterPosition) }}</p>
-                  </li>
-                </ol>
+                <p v-if="!dashboard.latest?.length" class="empty-state mt-3 text-sm text-slate-700">Belum ada surat dalam daftar terbaru.</p>
+                <div v-else class="latest-scroll mt-4" tabindex="0" role="region" aria-label="Pencatatan terbaru, geser untuk melihat semua kolom">
+                  <table class="latest-table">
+                    <thead><tr><th scope="col">Agenda</th><th scope="col">Tanggal diterima</th><th scope="col">Perihal</th><th scope="col">Asal surat</th><th scope="col">Posisi surat</th></tr></thead>
+                    <tbody><tr v-for="record in dashboard.latest" :key="`${record.rowHint}-${record.agenda}`"><td class="font-semibold tabular-nums">{{ display(record.agenda) }}</td><td>{{ display(record.receivedDate) }}</td><td>{{ display(record.subject) }}</td><td>{{ display(record.sender) }}</td><td><span class="letter-position">{{ formatPosition(record.letterPosition) }}</span></td></tr></tbody>
+                  </table>
+                </div>
               </section>
             </div>
           </template>
         </section>
 
-        <section v-if="activeView === 'report'" class="report-section rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6" aria-labelledby="report-title">
+        <section v-if="activeView === 'report'" class="workspace-panel report-section rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6" aria-labelledby="report-title">
           <div class="report-controls">
             <h1 id="report-title" class="text-2xl font-semibold tracking-tight">Rekap surat masuk</h1>
             <p class="mt-1 text-sm text-slate-700">Pratinjau seluruh 14 kolom. Filter periode memakai tanggal diterima.</p>
@@ -439,11 +497,11 @@ onMounted(loadInitial)
               <label class="grid gap-1 text-sm font-medium sm:col-span-2">Kata kunci (opsional)<Input v-model="reportKeyword" maxlength="200" placeholder="Agenda, nomor surat, asal, atau perihal" /></label>
               <label class="grid gap-1 text-sm font-medium">Dari tanggal<Input v-model="fromDate" type="date" :max="toDate || undefined" /></label>
               <label class="grid gap-1 text-sm font-medium">Sampai tanggal<Input v-model="toDate" type="date" :min="fromDate || undefined" /></label>
-              <label class="grid gap-1 text-sm font-medium sm:col-span-2">Posisi surat (pilih beberapa; kosong berarti tanpa hasil)<Select v-model="reportPositions" :options="positionOptions" aria-label="Filter posisi rekap" /></label>
+              <label class="grid gap-1 text-sm font-medium sm:col-span-2">Posisi surat (pilih beberapa; kosong berarti tanpa hasil)<MultiSelect v-model="reportPositions" :options="positionOptions" aria-label="Filter posisi rekap" /></label>
               <div class="flex flex-wrap items-center gap-3 sm:col-span-2"><Button type="submit" :disabled="reportLoading">{{ reportLoading ? 'Memuat...' : 'Tampilkan rekap' }}</Button><p class="text-sm text-slate-700">Kata kunci boleh kosong untuk semua surat pada posisi terpilih.</p></div>
             </form>
             <p v-if="reportError" class="mt-4 text-sm text-red-800" role="alert">{{ reportError }}</p>
-            <p v-if="reportLoading" class="mt-4 text-sm text-slate-700" role="status">Memuat rekap...</p>
+            <div v-if="reportLoading" class="mt-6" role="status" aria-label="Memuat rekap"><p class="text-sm text-slate-700">Memuat rekap...</p><div class="skeleton-lines mt-4" aria-hidden="true"><span></span><span></span><span></span></div></div>
             <template v-if="report">
               <p v-if="!reportIsCurrent" class="mt-4 text-sm text-amber-900" role="status">Filter berubah. Tampilkan rekap lagi sebelum mencetak atau mengekspor.</p>
               <div class="mt-5 flex flex-wrap items-end gap-4">
@@ -466,11 +524,11 @@ onMounted(loadInitial)
                 <tbody><tr v-for="record in report.records" :key="`${record.rowHint}-${record.agenda}`"><td v-for="[key] in reportColumns" :key="key">{{ display(record[key]) }}</td></tr></tbody>
               </table>
             </div>
-            <p v-else class="mt-4 text-sm text-slate-700">Tidak ada surat yang cocok dengan filter ini.</p>
+            <div v-else class="empty-state mt-5"><p class="font-semibold">Rekap kosong</p><p class="mt-1 text-sm text-slate-700">Ubah periode atau posisi surat, lalu tampilkan rekap lagi.</p></div>
           </template>
         </section>
 
-        <section v-if="activeView === 'list'" class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        <section v-if="activeView === 'list'" class="workspace-panel rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <h1 class="text-2xl font-semibold tracking-tight">Daftar surat masuk</h1>
             <Button v-if="role === 'WRITE'" @click="openCreate">Tambah surat</Button>
@@ -481,36 +539,51 @@ onMounted(loadInitial)
             <Button type="submit" :disabled="listLoading"><Search class="h-4 w-4" aria-hidden="true" /> Cari</Button>
           </form>
 
-          <div class="mt-4 flex flex-wrap items-center gap-3">
-            <label for="position-filter" class="text-sm font-medium">Posisi surat</label>
-            <Select id="position-filter" v-model="positions" :options="positionOptions" aria-label="Filter posisi surat" />
-            <Button variant="ghost" size="sm" @click="resetSearch">Reset</Button>
-            <Button variant="ghost" size="sm" :disabled="listLoading" @click="keyword.trim() ? search(false) : loadPositions()"><RotateCw class="h-4 w-4" aria-hidden="true" /> Muat ulang</Button>
+          <div class="mt-4 flex flex-wrap items-end gap-3">
+            <div class="grid min-w-48 flex-1 gap-1 sm:max-w-xs">
+              <label for="position-filter" class="text-sm font-medium">Posisi surat</label>
+              <Select v-model="selectedPosition">
+                <SelectTrigger id="position-filter" class="w-full"><SelectValue placeholder="Semua posisi" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-if="allPositions.includes('')" :value="0">Belum diisi</SelectItem>
+                  <SelectItem v-for="option in allPositions.filter(Boolean)" :key="option" :value="option">{{ option }}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button variant="outline" @click="resetSearch">Reset</Button>
+            <Button variant="outline" :disabled="listLoading" @click="keyword.trim() ? search(false) : loadPositions()"><RotateCw class="h-4 w-4" aria-hidden="true" /> Muat ulang</Button>
           </div>
 
           <p v-if="warningCount" class="mt-4 text-sm text-amber-900" role="status">{{ warningCount }} baris dilewati karena data tidak dapat dibaca.</p>
           <p v-if="listError" class="mt-4 text-sm text-red-800" role="alert">{{ listError }}</p>
-          <p v-else-if="listLoading" class="mt-4 text-sm text-slate-700" role="status" aria-live="polite">Memuat daftar surat...</p>
-          <p v-else class="mt-4 text-sm text-slate-700" role="status" aria-live="polite">{{ emptyMessage }}</p>
+          <div v-else-if="listLoading" class="mt-6" role="status" aria-label="Memuat daftar surat" aria-live="polite"><p class="text-sm text-slate-700">Memuat daftar surat...</p><div class="skeleton-lines mt-4" aria-hidden="true"><span></span><span></span><span></span></div></div>
+          <p v-else-if="records.length" class="mt-4 text-sm text-slate-700" role="status" aria-live="polite">{{ emptyMessage }}</p>
+          <div v-if="!listLoading && !listError && !records.length" class="empty-state mt-6">
+            <Search class="h-6 w-6" aria-hidden="true" />
+            <p class="mt-3 font-semibold">{{ keyword.trim() ? 'Tidak ada surat ditemukan' : 'Temukan surat yang Anda perlukan' }}</p>
+            <p class="mt-1 max-w-prose text-sm text-slate-700">{{ keyword.trim() ? 'Coba kata kunci lain atau hapus filter posisi.' : 'Cari berdasarkan agenda, nomor surat, asal, atau perihal.' }}</p>
+            <Button v-if="keyword.trim()" variant="outline" class="mt-4" @click="resetSearch">Reset filter</Button>
+          </div>
 
-          <div v-if="records.length" class="mt-3 divide-y divide-slate-200">
-            <article v-for="record in records" :key="`${record.rowHint}-${record.agenda}`" class="grid gap-3 py-4 sm:grid-cols-[1fr_auto] sm:items-center">
+          <div v-if="records.length" class="letter-list mt-3">
+            <article v-for="record in records" :key="`${record.rowHint}-${record.agenda}`" class="letter-row">
               <div class="min-w-0">
-                <h2 class="break-words font-semibold">{{ display(record.agenda) }} <span aria-hidden="true">/</span> {{ display(record.subject) }}</h2>
-                <p class="mt-1 break-words text-sm text-slate-700">{{ [display(record.receivedDate), display(record.letterNumber), display(record.sender), formatPosition(record.letterPosition)].join(' · ') }}</p>
+                <p class="letter-agenda">{{ display(record.agenda) }}</p>
+                <h2 class="letter-subject">{{ display(record.subject) }}</h2>
+                <p class="letter-meta">{{ display(record.sender) }} <span aria-hidden="true">/</span> {{ display(record.letterNumber) }} <span aria-hidden="true">/</span> {{ display(record.receivedDate) }}</p>
               </div>
-              <Button variant="outline" class="justify-self-start" @click="openDetail(record)">Lihat detail</Button>
+              <div class="letter-actions"><span class="letter-position">{{ formatPosition(record.letterPosition) }}</span><Button variant="outline" @click="openDetail(record)">Lihat detail</Button></div>
             </article>
           </div>
 
-          <nav v-if="total > 0" class="mt-5 flex items-center justify-between gap-3" aria-label="Paginasi daftar surat">
+          <nav v-if="total > 0" class="list-pagination mt-5 flex items-center justify-between gap-3" aria-label="Paginasi daftar surat">
             <Button variant="outline" :disabled="page <= 1 || listLoading" @click="page--; search(false)"><ChevronLeft class="h-4 w-4" aria-hidden="true" /> Sebelumnya</Button>
             <span class="text-sm text-slate-700">Halaman {{ page }} dari {{ pageCount }}</span>
             <Button variant="outline" :disabled="page >= pageCount || listLoading" @click="page++; search(false)">Berikutnya <ChevronRight class="h-4 w-4" aria-hidden="true" /></Button>
           </nav>
         </section>
 
-        <section v-if="activeView === 'list' && showCreate" class="mt-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6" aria-labelledby="create-title">
+        <section v-if="activeView === 'list' && showCreate" class="workspace-panel mt-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-6" aria-labelledby="create-title">
           <div class="flex items-start justify-between gap-4">
             <div><h2 id="create-title" class="text-xl font-semibold">Pencatatan surat baru</h2><p class="mt-1 text-sm text-slate-700">Nomor agenda dibuat otomatis saat disimpan.</p></div>
             <Button variant="ghost" size="icon" aria-label="Tutup formulir" :disabled="createBusy" @click="showCreate = false"><X class="h-5 w-5" aria-hidden="true" /></Button>
@@ -521,12 +594,12 @@ onMounted(loadInitial)
             <label class="grid gap-1 text-sm font-medium">Tanggal surat<Input v-model="createForm.letterDate" type="date" /></label>
             <label class="grid gap-1 text-sm font-medium">Asal surat *<Input v-model="createForm.sender" maxlength="500" required /></label>
             <label class="grid gap-1 text-sm font-medium sm:col-span-2">Perihal *<Input v-model="createForm.subject" maxlength="500" required /></label>
-            <label class="grid gap-1 text-sm font-medium sm:col-span-2">Isi disposisi<textarea v-model="createForm.disposition" maxlength="5000" rows="3" class="rounded-md border border-slate-300 px-3 py-2 focus-visible:ring-2 focus-visible:ring-blue-700" /></label>
-            <label class="grid gap-1 text-sm font-medium">Tujuan disposisi<textarea v-model="createForm.dispositionTargets" maxlength="5000" rows="3" class="rounded-md border border-slate-300 px-3 py-2 focus-visible:ring-2 focus-visible:ring-blue-700" /></label>
+            <label class="grid gap-1 text-sm font-medium sm:col-span-2">Isi disposisi<Textarea v-model="createForm.disposition" maxlength="5000" rows="3" class="rounded-md border border-slate-300 px-3 py-2 focus-visible:ring-2 focus-visible:ring-blue-700" /></label>
+            <label class="grid gap-1 text-sm font-medium">Tujuan disposisi<Textarea v-model="createForm.dispositionTargets" maxlength="5000" rows="3" class="rounded-md border border-slate-300 px-3 py-2 focus-visible:ring-2 focus-visible:ring-blue-700" /></label>
             <label class="grid gap-1 text-sm font-medium">Keterangan / tanggal paraf<Input v-model="createForm.parafDateOrNote" maxlength="5000" /></label>
             <label class="grid gap-1 text-sm font-medium">Tautan berkas surat<Input v-model="createForm.letterFileReference" type="url" maxlength="2000" placeholder="https://..." /></label>
-            <label class="grid gap-1 text-sm font-medium">Posisi surat<select v-model="createForm.letterPosition" class="h-11 rounded-md border border-slate-300 bg-white px-3"><option value="">Belum diisi</option><option v-for="option in allPositions.filter(value => value)" :key="option" :value="option">{{ option }}</option></select></label>
-            <label class="grid gap-1 text-sm font-medium sm:col-span-2">Keterangan tindak lanjut<textarea v-model="createForm.followupNote" maxlength="5000" rows="3" class="rounded-md border border-slate-300 px-3 py-2 focus-visible:ring-2 focus-visible:ring-blue-700" /></label>
+            <div class="grid gap-1 text-sm font-medium"><label for="create-position">Posisi surat</label><div class="flex items-center gap-2"><Select v-model="createForm.letterPosition"><SelectTrigger id="create-position" class="min-h-11 flex-1"><SelectValue placeholder="Belum diisi" /></SelectTrigger><SelectContent><SelectItem v-for="option in allPositions.filter(value => value)" :key="option" :value="option">{{ option }}</SelectItem></SelectContent></Select><Button type="button" variant="ghost" size="sm" :disabled="!createForm.letterPosition" @click="createForm.letterPosition = ''">Kosongkan</Button></div></div>
+            <label class="grid gap-1 text-sm font-medium sm:col-span-2">Keterangan tindak lanjut<Textarea v-model="createForm.followupNote" maxlength="5000" rows="3" class="rounded-md border border-slate-300 px-3 py-2 focus-visible:ring-2 focus-visible:ring-blue-700" /></label>
             <label class="grid gap-1 text-sm font-medium sm:col-span-2">Berkas / catatan tindak lanjut<Input v-model="createForm.followupReference" maxlength="5000" placeholder="URL HTTPS atau catatan" /></label>
             <p v-if="createError" class="text-sm text-red-800 sm:col-span-2" role="alert">{{ createError }}</p>
             <div v-if="duplicateCandidates.length" class="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm sm:col-span-2">
@@ -541,7 +614,7 @@ onMounted(loadInitial)
           </form>
         </section>
 
-        <section v-if="activeView === 'list' && detail" class="mt-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6" aria-labelledby="detail-title">
+        <section v-if="activeView === 'list' && detail" class="workspace-panel mt-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-6" aria-labelledby="detail-title">
           <div class="flex items-start justify-between gap-4">
             <div class="min-w-0"><h2 id="detail-title" class="break-words text-xl font-semibold">{{ detailLoading ? 'Memuat detail...' : display(detail.subject) }}</h2><p class="mt-1 text-sm text-slate-700">Nomor agenda: {{ display(detail.agenda) }}</p></div>
             <div class="flex gap-2">
@@ -552,13 +625,13 @@ onMounted(loadInitial)
           </div>
           <p v-if="detailError" class="mt-4 text-sm text-red-800" role="alert">{{ detailError }}</p>
           <form v-if="editingDetail && !detailLoading" class="mt-5 grid gap-4 sm:grid-cols-2" @submit.prevent="submitEdit">
-            <label v-for="[key, label] in (editMode === 'quick' ? fields.filter(([key]) => ['disposition', 'dispositionTargets', 'parafDateOrNote', 'letterPosition', 'followupNote'].includes(key)) : fields.filter(([key]) => key !== 'documentDescription').concat([['letterFileReference', 'Tautan berkas surat'], ['followupReference', 'Berkas / catatan tindak lanjut']]))" :key="key" class="grid min-w-0 gap-1 text-sm font-semibold text-slate-800">
-              {{ label }}
-              <textarea v-if="['disposition', 'dispositionTargets', 'followupNote'].includes(key)" v-model="editForm[key]" maxlength="5000" rows="3" class="rounded-md border border-slate-300 px-3 py-2 font-normal focus-visible:ring-2 focus-visible:ring-blue-700" />
-              <Input v-else-if="key === 'receivedDate' || key === 'letterDate'" v-model="editForm[key]" type="date" :required="key === 'receivedDate'" />
-              <select v-else-if="key === 'letterPosition'" v-model="editForm[key]" class="h-11 rounded-md border border-slate-300 bg-white px-3 font-normal"><option value="">Belum diisi</option><option v-for="option in allPositions.filter(value => value)" :key="option" :value="option">{{ option }}</option></select>
-              <Input v-else v-model="editForm[key]" :maxlength="key === 'letterNumber' || key === 'sender' || key === 'subject' ? 500 : 5000" :type="key === 'letterFileReference' ? 'url' : 'text'" />
-            </label>
+            <div v-for="[key, label] in (editMode === 'quick' ? fields.filter(([key]) => ['disposition', 'dispositionTargets', 'parafDateOrNote', 'letterPosition', 'followupNote'].includes(key)) : fields.filter(([key]) => key !== 'documentDescription').concat([['letterFileReference', 'Tautan berkas surat'], ['followupReference', 'Berkas / catatan tindak lanjut']]))" :key="key" class="grid min-w-0 gap-1 text-sm font-semibold text-slate-800">
+              <label :for="`edit-${key}`">{{ label }}</label>
+              <Textarea v-if="['disposition', 'dispositionTargets', 'followupNote'].includes(key)" :id="`edit-${key}`" v-model="editForm[key]" maxlength="5000" rows="3" class="rounded-md border border-slate-300 px-3 py-2 font-normal focus-visible:ring-2 focus-visible:ring-blue-700" />
+              <Input v-else-if="key === 'receivedDate' || key === 'letterDate'" :id="`edit-${key}`" v-model="editForm[key]" type="date" :required="key === 'receivedDate'" />
+              <div v-else-if="key === 'letterPosition'" class="flex items-center gap-2 font-normal"><Select v-model="editForm[key]"><SelectTrigger :id="`edit-${key}`" class="min-h-11 flex-1"><SelectValue placeholder="Belum diisi" /></SelectTrigger><SelectContent><SelectItem v-if="editForm[key] && !allPositions.includes(editForm[key])" :value="editForm[key]">{{ editForm[key] }} (nilai saat ini)</SelectItem><SelectItem v-for="option in allPositions.filter(value => value)" :key="option" :value="option">{{ option }}</SelectItem></SelectContent></Select><Button type="button" variant="ghost" size="sm" :disabled="!editForm[key]" @click="editForm[key] = ''">Kosongkan</Button></div>
+              <Input v-else :id="`edit-${key}`" v-model="editForm[key]" :maxlength="key === 'letterNumber' || key === 'sender' || key === 'subject' ? 500 : 5000" :type="key === 'letterFileReference' ? 'url' : 'text'" />
+            </div>
             <label v-if="editMode === 'full' && ['sender', 'letterNumber', 'letterDate', 'subject'].some(key => editForm[key] !== editBaseline[key])" class="flex items-start gap-2 text-sm sm:col-span-2"><input v-model="updateDescription" type="checkbox" class="mt-1"> Perbarui uraian berkas dari identitas surat</label>
             <p v-if="editError" class="text-sm text-red-800 sm:col-span-2" role="alert">{{ editError }}</p>
             <div class="flex flex-wrap gap-2 sm:col-span-2">

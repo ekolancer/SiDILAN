@@ -15,7 +15,7 @@ Tampilan formal, bersih dan mudah dibaca, dengan identitas biru tua–oranye SiD
 
 | Menu | Isi |
 | --- | --- |
-| Dashboard | Ringkasan pencatatan, posisi surat dan daftar terbaru |
+| Dashboard | Ringkasan pencatatan, grafik status/tren/unit tujuan dan daftar terbaru |
 | Surat Masuk | Pencarian, filter, daftar, tombol tambah dan detail |
 | Rekap | Preview register, cetak dan CSV |
 
@@ -27,18 +27,20 @@ Menu Disposisi, Penugasan, Tugas Saya, Review, Arsip, Surat Keluar dan WhatsApp 
 
 | Elemen | Arahan |
 | --- | --- |
-| Sidebar desktop | Lebar sekitar 220 px, tiga menu utama |
-| Header | Judul halaman, identitas pengguna dan Muat ulang |
-| Latar halaman | `#F4F7FB`, panel putih dengan border ringan |
+| Navigasi | Sidebar navy 224 px dengan tiga menu dan ikon; menu aktif berwarna biru. Pada mobile menjadi navigasi horizontal |
+| Header | Header putih berisi sapaan, peran dan identitas akun; tombol Muat ulang pada tampilan terkait |
+| Latar halaman | `#F4F7FB`; panel putih dengan border ringan. Kartu statistik memakai tint biru, hijau, kuning dan abu kebiruan seperti referensi |
 | Warna merek | Navy `#0B2745`, biru `#1263A0`, oranye `#F47A14` |
 | Teks | Utama `#172B4D`, sekunder `#52647A` |
-| Tipografi | Font sistem; body 14–16 px; judul 24 px |
+| Tipografi | Outfit lokal dengan fallback sistem; body 14–16 px; judul responsif 25–32 px |
 | Input/tombol | Tinggi 40–44 px; label jelas; radius 8 px |
 | Panel | Radius 12 px; jarak 16–24 px; dekorasi terbatas |
 
 Tombol utama menggunakan biru dengan teks putih. Oranye dipakai sebagai aksen. Kontras teks/input/fokus diverifikasi pada implementasi; warna bukan satu-satunya pembeda.
 
-Pada layar kecil, sidebar menjadi drawer, form menjadi satu kolom dan daftar surat menjadi kartu ringkas. Target lebar minimum 360 px; tombol dapat digunakan dengan sentuhan maupun keyboard. Logo resmi dipakai bila tersedia.
+Komponen shadcn-vue yang disiapkan: Button, Input, Label, Textarea, Select (posisi tunggal), Card, Badge, Table, Dialog, Sheet, dan Sonner. Filter daftar surat menggunakan dropdown satu posisi (Semua posisi, Belum diisi, atau salah satu nilai live), dengan tombol Reset dan Muat ulang. Filter rekap tetap menggunakan native multi-select untuk beberapa posisi; Dialog, Sheet, dan Sonner tersedia untuk layar yang memerlukannya, bukan pengganti otomatis bagi panel atau pesan saat ini.
+
+Pada layar kecil, sidebar menjadi navigasi horizontal yang dapat digeser, form menjadi satu kolom dan daftar surat menjadi baris ringkas bertumpuk. Target lebar minimum 360 px; tombol dapat digunakan dengan sentuhan maupun keyboard. Tautan lewati ke konten tersedia untuk keyboard. Logo resmi dipakai bila tersedia.
 
 ## 4. Dashboard
 
@@ -49,11 +51,19 @@ Default periode bulan berjalan untuk ringkasan berbasis tanggal diterima. Tampil
 - Pencatatan dengan isi disposisi.
 - Pencatatan dengan keterangan tindak lanjut.
 
-Panel **Posisi surat** menampilkan hitungan label L dan Belum diisi. Label seperti Input Srikandi atau Sudah Kirim di Grup tetap merupakan informasi pencatatan manual.
+Label posisi surat seperti Input Srikandi atau Sudah Kirim di Grup tetap merupakan informasi pencatatan manual pada daftar/detail, bukan status tindak lanjut pada donat.
 
 Daftar terbaru menampilkan agenda, tanggal diterima, asal, perihal dan posisi. Klik membuka detail. Angka dibaca dari spreadsheet, dengan waktu pemuatan dan tombol Muat ulang; tidak ada angka ilustrasi yang ditanam sebagai data.
 
-Ringkasan tidak memuat Selesai, Terlambat, SLA atau persentase penyelesaian. Catatan tindak lanjut terisi diberi label persis demikian, tanpa dianggap bukti selesai.
+Ringkasan tidak menghitung selesai, terlambat, SLA atau persentase penyelesaian dari posisi maupun dari sekadar adanya catatan. Donat hanya menampilkan hitungan label eksplisit di kolom M; label tersebut bukan bukti verifikasi penyelesaian atau perhitungan tenggat otomatis.
+
+Referensi dashboard digunakan untuk komposisi sidebar, kartu statistik berikon dan tabel pencatatan terbaru. Empat kartu tetap memakai metrik register yang tersedia. Panel Posisi surat diganti tiga grafik:
+
+- Donat status tindak lanjut menghitung hanya nilai kolom M yang persis **Selesai**, **Dalam Proses**, atau **Lewat Batas Waktu** (abaikan kapitalisasi dan spasi tepi). Surat tanpa ketiga label tersebut dilaporkan terpisah, tidak diam-diam dianggap dalam proses atau terlambat.
+- Tren 12 bulan terakhir menghitung tanggal diterima surat masuk dan **Tanggal Surat** dari spreadsheet surat keluar terpisah. ID dan nama sheet keluar dibaca dari Script Properties `OUTGOING_SPREADSHEET_ID` serta `OUTGOING_SHEET_NAME`; ketika tidak dikonfigurasi, tidak dapat dibaca, atau header tidak ada, garis keluar tidak ditampilkan dan pesan pemulihan muncul. Nilai bulan tanpa surat tetap nol bila sumber berhasil dibaca.
+- Batang horizontal **Surat per unit tujuan** menghitung nilai kolom Tujuan Disposisi. Koma dan titik koma memisahkan tujuan; tiap unit unik dihitung sekali per surat. Hanya 8 unit terbanyak ditampilkan, dengan jumlah lain disebutkan.
+
+Grafik tidak menambah tahap proses, SLA, tenggat, surat keluar ke register masuk, notifikasi atau WhatsApp. Surat dengan label Lewat Batas Waktu adalah label manual, bukan hasil perhitungan tenggat.
 
 ## 5. Daftar surat masuk
 

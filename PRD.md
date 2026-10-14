@@ -96,7 +96,7 @@ Validasi sumber juga memuat Baru Masuk dan variasi Sudah Dikirim Grup. Aplikasi 
 
 Pengguna dapat memilih posisi secara langsung, tanpa harus menjalankan tahapan sebelumnya. Keterangan tindak lanjut dapat ditambah atau diperbarui kapan saja oleh pencatat yang berwenang.
 
-Posisi surat tidak diperlakukan sebagai bukti selesai. Dashboard tidak menampilkan Selesai, Terlambat atau SLA karena spreadsheet belum menyediakan field yang mendukung perhitungan tersebut. Pengiriman grup dicatat manual dan tidak mengirim pesan WhatsApp.
+Posisi surat tidak diperlakukan sebagai bukti selesai. Dashboard menghitung label persis Selesai, Dalam Proses dan Lewat Batas Waktu hanya jika tercatat di kolom Keterangan Tindak Lanjut (M); label manual bukan hasil verifikasi selesai maupun perhitungan SLA/tenggat otomatis. Surat tanpa ketiga label itu dihitung terpisah. Pengiriman grup dicatat manual dan tidak mengirim pesan WhatsApp.
 
 ## 7. Alur penggunaan
 
@@ -129,7 +129,9 @@ Tidak ada pengajuan penutupan, buka kembali surat, tahapan wajib, atau antrean r
 | Diterima bulan ini | Baris dengan tanggal B yang dapat dibaca dan berada pada bulan berjalan WIB |
 | Memiliki disposisi | Baris dengan H tidak kosong; tidak berarti disposisi sudah diverifikasi |
 | Memiliki keterangan tindak lanjut | Baris dengan M tidak kosong; tidak berarti surat selesai |
-| Distribusi posisi surat | Hitungan nilai L sesuai teks yang tersimpan, termasuk Belum diisi |
+| Status tindak lanjut | Hitungan label persis di kolom M; nilai lain/blank dilaporkan terpisah |
+| Tren surat | 12 bulan terakhir; masuk dari tanggal diterima B, keluar dari header Tanggal Surat pada spreadsheet terpisah jika dikonfigurasi |
+| Surat per unit tujuan | Hitungan tujuan disposisi I, dipisah koma/titik koma; satu unit dihitung sekali per surat |
 
 Filter periode menggunakan tanggal diterima. Tanggal yang tidak dapat dipahami tidak ditebak dan disebutkan jumlahnya pada rekap periode. Total pencatatan tetap dapat dihitung tanpa tanggal. Jika variasi label posisi ingin digabung pada grafik, tampilkan aturan penggabungan dan biarkan nilai sumber tetap utuh.
 

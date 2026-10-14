@@ -31,10 +31,12 @@ Konfigurasi pengelola di Script Properties:
 | SHEET_NAME | SuratMasuk, setelah dicocokkan dengan tab live |
 | READ_EMAILS | Email Google yang boleh membaca |
 | WRITE_EMAILS | Email Google yang boleh menambah/mengedit |
+| OUTGOING_SPREADSHEET_ID | Opsional; ID spreadsheet terpisah untuk seri Surat Keluar pada tren Dashboard |
+| OUTGOING_SHEET_NAME | Opsional; nama sheet pada spreadsheet Surat Keluar dengan header `Tanggal Surat` |
 
 Target URL yang diberikan pengguna: [spreadsheet surat masuk](https://docs.google.com/spreadsheets/d/18zKxtYJxPVhdMWzSadat4GEwXqSjp3ZV/edit?gid=839241284#gid=839241284).
 
-Server menggunakan `SpreadsheetApp.openById`, bukan active spreadsheet atau ID yang dikirim browser. Header A:N diperiksa terhadap mapping yang ditetapkan; perubahan header yang tidak kompatibel menghasilkan error konfigurasi sebelum write. Aplikasi tidak mengganti nama header untuk membuatnya cocok.
+Server menggunakan `SpreadsheetApp.openById`, bukan active spreadsheet atau ID yang dikirim browser. Tren Surat Keluar dibaca secara terpisah dan hanya agregat bulanan yang dikirim ke UI; tanpa dua properti opsional atau akses baca sheet, seri keluar ditandai belum tersedia dan tidak diasumsikan nol. Header A:N diperiksa terhadap mapping yang ditetapkan; perubahan header yang tidak kompatibel menghasilkan error konfigurasi sebelum write. Aplikasi tidak mengganti nama header untuk membuatnya cocok.
 
 Workbook XLSX yang diperiksa adalah referensi struktur. File tersebut tidak diimpor sebagai database produksi. Spreadsheet live perlu diverifikasi aksesnya, format native Google Sheets dan tab tujuan; sheetId Excel tidak dianggap sama dengan gid Google. Jika target belum kompatibel, penyesuaian target harus dibahas dengan pemilik sebelum implementasi menulis data.
 
