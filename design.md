@@ -54,14 +54,14 @@ Default periode bulan berjalan untuk ringkasan berbasis tanggal diterima. Tampil
 
 Label posisi surat seperti Input Srikandi atau Sudah Kirim di Grup tetap merupakan informasi pencatatan manual pada daftar/detail, bukan status tindak lanjut pada donat.
 
-Daftar terbaru menampilkan agenda, tanggal diterima, asal, perihal dan posisi. Klik membuka detail. Angka dibaca dari spreadsheet, dengan waktu pemuatan dan tombol Muat ulang; tidak ada angka ilustrasi yang ditanam sebagai data.
+Dashboard terbuka sebagai tampilan awal. Daftar terbaru menampilkan agenda, tanggal diterima, perihal, asal surat dan unit tujuan dari kolom Tujuan Disposisi; bila belum dicatat, tampil Belum diisi. Angka dibaca dari spreadsheet, dengan waktu pemuatan dan tombol Muat ulang; tidak ada angka ilustrasi yang ditanam sebagai data.
 
 Ringkasan tidak menghitung selesai, terlambat, SLA atau persentase penyelesaian dari posisi maupun dari sekadar adanya catatan. Donat hanya menampilkan hitungan label eksplisit di kolom M; label tersebut bukan bukti verifikasi penyelesaian atau perhitungan tenggat otomatis.
 
 Referensi dashboard digunakan untuk komposisi sidebar, kartu statistik berikon dan tabel pencatatan terbaru. Empat kartu tetap memakai metrik register yang tersedia. Panel Posisi surat diganti tiga grafik:
 
 - Donat status tindak lanjut menghitung hanya nilai kolom M yang persis **Selesai**, **Dalam Proses**, atau **Lewat Batas Waktu** (abaikan kapitalisasi dan spasi tepi). Surat tanpa ketiga label tersebut dilaporkan terpisah, tidak diam-diam dianggap dalam proses atau terlambat.
-- Tren 12 bulan terakhir menghitung tanggal diterima surat masuk dan **Tanggal Surat** dari spreadsheet surat keluar terpisah. ID dan nama sheet keluar dibaca dari Script Properties `OUTGOING_SPREADSHEET_ID` serta `OUTGOING_SHEET_NAME`; ketika tidak dikonfigurasi, tidak dapat dibaca, atau header tidak ada, garis keluar tidak ditampilkan dan pesan pemulihan muncul. Nilai bulan tanpa surat tetap nol bila sumber berhasil dibaca.
+- Tren mengikuti bulan dari tanggal diterima surat masuk paling awal hingga paling akhir pada register, termasuk bulan tanpa surat. Seri keluar menghitung **Tanggal Surat** dari spreadsheet terpisah pada rentang bulan yang sama. Surat masuk tanpa tanggal terbaca tidak masuk tren. ID dan nama sheet keluar dibaca dari Script Properties `OUTGOING_SPREADSHEET_ID` serta `OUTGOING_SHEET_NAME`; ketika tidak dikonfigurasi, tidak dapat dibaca, atau header tidak ada, garis keluar tidak ditampilkan. Grafik kosong bila register tidak memiliki tanggal masuk yang dapat dibaca.
 - Batang horizontal **Surat per unit tujuan** menghitung nilai kolom Tujuan Disposisi. Koma dan titik koma memisahkan tujuan; tiap unit unik dihitung sekali per surat. Hanya 8 unit terbanyak ditampilkan, dengan jumlah lain disebutkan.
 
 Grafik tidak menambah tahap proses, SLA, tenggat, surat keluar ke register masuk, notifikasi atau WhatsApp. Surat dengan label Lewat Batas Waktu adalah label manual, bukan hasil perhitungan tenggat.

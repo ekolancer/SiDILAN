@@ -328,11 +328,16 @@ function getDashboardStats() {
     const month = Utilities.formatDate(new Date(), 'Asia/Jakarta', 'yyyy-MM');
     const statusCounts = { selesai: 0, dalamProses: 0, lewatBatasWaktu: 0 };
     const units = new Map();
-    const monthKeys = Array.from({ length: 12 }, (_, index) => {
-      const [year, monthNumber] = month.split('-').map(Number);
-      const date = new Date(Date.UTC(year, monthNumber - 12 + index, 1));
-      return date.toISOString().slice(0, 7);
-    });
+    const datedMonths = records.map(record => record.receivedDateKey?.slice(0, 7)).filter(Boolean).sort();
+    const monthKeys = [];
+    if (datedMonths.length) {
+      const [firstYear, firstMonth] = datedMonths[0].split('-').map(Number);
+      const [lastYear, lastMonth] = datedMonths[datedMonths.length - 1].split('-').map(Number);
+      for (let year = firstYear, monthNumber = firstMonth; year < lastYear || (year === lastYear && monthNumber <= lastMonth); monthNumber++) {
+        if (monthNumber > 12) { year++; monthNumber = 1; }
+        monthKeys.push(`${year}-${String(monthNumber).padStart(2, '0')}`);
+      }
+    }
     const incoming = Object.fromEntries(monthKeys.map(key => [key, 0]));
     let unclassifiedStatus = 0;
     let receivedThisMonth = 0;

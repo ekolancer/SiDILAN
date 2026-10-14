@@ -1,6 +1,6 @@
 <script setup>
-import { computed, nextTick, onMounted, ref } from 'vue'
-import { CalendarDays, ChevronLeft, ChevronRight, ClipboardList, ExternalLink, FileChartColumn, FileText, Inbox, LayoutDashboard, RotateCw, Search, X } from '@lucide/vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { CalendarDays, ChevronLeft, ChevronRight, ClipboardList, ExternalLink, FileChartColumn, FileText, Inbox, LayoutDashboard, RotateCw, Search, UserRound, X } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -40,7 +40,9 @@ const createBusy = ref(false)
 const createError = ref('')
 const duplicateCandidates = ref([])
 const createForm = ref(emptyCreateForm())
-const activeView = ref('list')
+const activeView = ref('dashboard')
+const jakartaClock = ref('')
+let clockTimer = null
 const dashboard = ref(null)
 const dashboardLoading = ref(false)
 const dashboardError = ref('')
@@ -95,6 +97,7 @@ const donutStyle = computed(() => {
 const unitCounts = computed(() => (dashboard.value?.unitCounts || []).slice(0, 8))
 const maxUnitCount = computed(() => Math.max(1, ...unitCounts.value.map(unit => unit.count)))
 const trendMax = computed(() => Math.max(1, ...(dashboard.value?.trend || []).flatMap(month => [month.incoming, month.outgoing || 0])))
+const trendWidth = computed(() => Math.max(620, 80 + ((dashboard.value?.trend?.length || 1) - 1) * 48))
 function trendPoints(key) {
   const months = dashboard.value?.trend || []
   return months.map((month, index) => `${40 + index * 48},${168 - (month[key] || 0) / trendMax.value * 130}`).join(' ')
@@ -116,6 +119,7 @@ async function loadInitial() {
     email.value = result.email
     role.value = result.role
     await loadPositions()
+    loadDashboard()
   } catch (error) {
     statusError.value = error.message === 'APPS_SCRIPT_UNAVAILABLE'
       ? 'Aplikasi harus dibuka melalui deployment Google Apps Script.'
@@ -385,7 +389,18 @@ function formatPosition(value) {
   return value || 'Belum diisi'
 }
 
-onMounted(loadInitial)
+function updateJakartaClock() {
+  jakartaClock.value = new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+  }).format(new Date())
+}
+
+onMounted(() => {
+  updateJakartaClock()
+  clockTimer = setInterval(updateJakartaClock, 1000)
+  loadInitial()
+})
+onUnmounted(() => clearInterval(clockTimer))
 </script>
 
 <template>
@@ -400,10 +415,15 @@ onMounted(loadInitial)
     </aside>
     <header class="app-header app-welcome-header print:hidden">
       <div class="app-header-inner">
-        <div class="app-welcome"><p>Selamat Datang</p><span>Register surat masuk</span></div>
-        <div v-if="role" class="app-account">
-          <span class="app-role">{{ role === 'WRITE' ? 'Administrator' : 'Viewer' }}</span>
-          <span v-if="email" class="app-email">{{ email }}</span>
+        <div class="app-welcome">
+          <p>Selamat datang, <span v-if="role">, {{ role === 'WRITE' ? 'Administrator' : 'Viewer' }}</span><span v-if="email" class="welcome-email">, ( {{ email }} )</span></p>
+          <blockquote>“Setiap surat tercatat dengan baik, setiap tindak lanjut lebih terarah.”</blockquote>
+        </div>
+        <div class="app-header-tools">
+          <time class="jakarta-clock" :datetime="new Date().toISOString()" aria-label="Waktu saat ini di WIB"><span class="clock-label">Waktu saat ini</span><strong>{{ jakartaClock }}</strong><span class="clock-zone">WIB</span></time>
+          <div v-if="role" class="app-account" :aria-label="`${role === 'WRITE' ? 'Administrator' : 'Viewer'}${email ? `, ${email}` : ''}`">
+            <span class="account-avatar" aria-hidden="true"><UserRound /></span>
+          </div>
         </div>
       </div>
     </header>
@@ -423,7 +443,7 @@ onMounted(loadInitial)
       <template v-else>
         <section v-if="activeView === 'dashboard'" class="dashboard-view page-dashboard" aria-labelledby="dashboard-title">
           <div class="flex flex-wrap items-center justify-between gap-3">
-            <h1 id="dashboard-title" class="text-2xl font-semibold tracking-tight">Ringkasan surat masuk</h1>
+            <h1 id="dashboard-title" class="text-2xl font-semibold tracking-tight">Dashboard</h1>
             <Button variant="outline" :disabled="dashboardLoading" @click="loadDashboard"><RotateCw class="h-4 w-4" aria-hidden="true" /> Muat ulang</Button>
           </div>
           <p v-if="dashboardError" class="mt-4 text-sm text-red-800" role="alert">{{ dashboardError }}</p>
@@ -431,57 +451,51 @@ onMounted(loadInitial)
           <template v-if="dashboard">
             <p class="mt-2 text-sm text-slate-700">Data diperbarui {{ dashboard.loadedAt || '—' }} WIB</p>
             <dl class="summary-grid mt-6">
-              <div class="metric-total"><dt><Inbox aria-hidden="true" /><span>Total pencatatan</span></dt><dd>{{ dashboard.total }}</dd></div>
-              <div class="metric-month"><dt><CalendarDays aria-hidden="true" /><span>Diterima bulan ini (WIB)</span></dt><dd>{{ dashboard.receivedThisMonth }}</dd></div>
-              <div class="metric-disposition"><dt><FileText aria-hidden="true" /><span>Memiliki isi disposisi (H)</span></dt><dd>{{ dashboard.withDisposition }}</dd></div>
-              <div class="metric-followup"><dt><ClipboardList aria-hidden="true" /><span>Memiliki keterangan tindak lanjut (M)</span></dt><dd>{{ dashboard.withFollowup }}</dd></div>
+              <div class="metric-total"><dt><Inbox aria-hidden="true" /><span>Total Surat Masuk</span></dt><dd>{{ dashboard.total }}</dd></div>
+              <div class="metric-month"><dt><CalendarDays aria-hidden="true" /><span>Surat Masuk Bulan ini (WIB)</span></dt><dd>{{ dashboard.receivedThisMonth }}</dd></div>
+              <div class="metric-disposition"><dt><FileText aria-hidden="true" /><span>Disposisi</span></dt><dd>{{ dashboard.withDisposition }}</dd></div>
+              <div class="metric-followup"><dt><ClipboardList aria-hidden="true" /><span>Tindak Lanjut</span></dt><dd>{{ dashboard.withFollowup }}</dd></div>
             </dl>
             <p v-if="dashboard.unreadableDates" class="mt-5 text-sm text-amber-900" role="status">{{ dashboard.unreadableDates }} tanggal diterima tidak dapat dibaca; tidak dihitung dalam tren.</p>
             <p v-if="dashboard.warningCount" class="mt-1 text-sm text-amber-900">{{ dashboard.warningCount }} baris dilewati karena data tidak dapat dibaca.</p>
             <div class="dashboard-charts mt-8">
               <section class="dashboard-panel" aria-labelledby="status-chart-title">
-                <h2 id="status-chart-title" class="text-lg font-semibold">Status tindak lanjut</h2>
-                <p class="chart-note">Berdasarkan label persis pada Keterangan Tindak Lanjut.</p>
+                <h2 id="status-chart-title" class="text-lg font-semibold">Status Tindak Lanjut</h2>
                 <div class="donut-layout mt-5">
                   <div class="status-donut" :style="donutStyle" role="img" :aria-label="`Status tindak lanjut: ${followupStatuses.map(status => `${status.label} ${status.count}`).join(', ')}`"><div><strong>{{ classifiedTotal }}</strong><span>berstatus</span></div></div>
                   <dl class="status-legend"><div v-for="status in followupStatuses" :key="status.key"><dt :class="`status-${status.key}`">{{ status.label }}</dt><dd>{{ status.count }}</dd></div></dl>
                 </div>
-                <p v-if="dashboard.unclassifiedStatus" class="chart-note mt-4">{{ dashboard.unclassifiedStatus }} surat tanpa salah satu dari tiga label tersebut tidak masuk donat.</p>
-                <p v-if="!classifiedTotal" class="chart-note mt-4">Belum ada status yang dapat digambarkan.</p>
               </section>
               <section class="dashboard-panel" aria-labelledby="trend-chart-title">
                 <h2 id="trend-chart-title" class="text-lg font-semibold">Tren surat</h2>
-                <p class="chart-note">12 bulan terakhir berdasarkan tanggal diterima dan Tanggal Surat.</p>
                 <div class="trend-key mt-4"><span class="incoming-key">Surat Masuk</span><span v-if="!dashboard.outgoingUnavailable" class="outgoing-key">Surat Keluar</span></div>
-                <div v-if="dashboard.trend?.length" class="trend-scroll mt-3" tabindex="0" role="region" aria-label="Grafik tren surat 12 bulan, geser untuk melihat seluruh bulan">
-                  <svg class="trend-svg" viewBox="0 0 620 215" role="img" aria-label="Tren bulanan surat masuk dan surat keluar; angka lengkap tersedia pada tabel di bawah">
-                    <path v-for="line in [38, 103, 168]" :key="line" :d="`M 40 ${line} H 592`" class="trend-gridline" />
+                <div v-if="dashboard.trend?.length" class="trend-scroll mt-3" tabindex="0" role="region" aria-label="Grafik tren surat berdasarkan bulan dari register, geser untuk melihat seluruh bulan">
+                  <svg class="trend-svg" :viewBox="`0 0 ${trendWidth} 215`" :style="{ width: `${trendWidth}px` }" role="img" aria-label="Tren bulanan surat masuk dan surat keluar; angka lengkap tersedia pada tabel di bawah">
+                    <path v-for="line in [38, 103, 168]" :key="line" :d="`M 40 ${line} H ${trendWidth - 28}`" class="trend-gridline" />
                     <text x="8" y="42" class="trend-axis">{{ trendMax }}</text><text x="8" y="172" class="trend-axis">0</text>
                     <polyline :points="trendPoints('incoming')" class="trend-incoming" />
                     <polyline v-if="!dashboard.outgoingUnavailable" :points="trendPoints('outgoing')" class="trend-outgoing" />
                     <g v-for="(month, index) in dashboard.trend" :key="month.month"><circle :cx="40 + index * 48" :cy="168 - month.incoming / trendMax * 130" r="3.5" class="trend-dot-incoming" /><circle v-if="!dashboard.outgoingUnavailable" :cx="40 + index * 48" :cy="168 - month.outgoing / trendMax * 130" r="3.5" class="trend-dot-outgoing" /><text :x="40 + index * 48" y="195" class="trend-month">{{ trendLabel(month.month) }}</text></g>
                   </svg>
                 </div>
+                <p v-else class="chart-note mt-3">Belum ada tanggal diterima yang dapat dikelompokkan per bulan.</p>
                 <details v-if="dashboard.trend?.length" class="trend-data"><summary>Lihat angka per bulan</summary><table><thead><tr><th scope="col">Bulan</th><th scope="col">Masuk</th><th scope="col">Keluar</th></tr></thead><tbody><tr v-for="month in dashboard.trend" :key="month.month"><th scope="row">{{ trendLabel(month.month) }}</th><td>{{ month.incoming }}</td><td>{{ month.outgoing ?? 'Belum tersedia' }}</td></tr></tbody></table></details>
-                <p v-if="dashboard.outgoingUnavailable" class="chart-note mt-3" role="status">Data Surat Keluar belum tersedia. Atur OUTGOING_SPREADSHEET_ID dan OUTGOING_SHEET_NAME pada Script Properties, lalu pastikan akun punya akses baca.</p>
-                <p v-else-if="dashboard.outgoingUnreadableDates" class="chart-note mt-3">{{ dashboard.outgoingUnreadableDates }} tanggal surat keluar tidak dapat dibaca; tidak dihitung dalam tren.</p>
               </section>
               <section class="dashboard-panel" aria-labelledby="units-chart-title">
-                <h2 id="units-chart-title" class="text-lg font-semibold">Surat per unit tujuan</h2>
-                <p class="chart-note">Berdasarkan Tujuan Disposisi; beberapa tujuan dihitung masing-masing.</p>
+                <h2 id="units-chart-title" class="text-lg font-semibold">Unit Kerja Tujuan</h2>
                 <p v-if="!unitCounts.length" class="empty-state mt-4 text-sm">Belum ada unit tujuan yang dicatat.</p>
                 <ol v-else class="unit-bars mt-5"><li v-for="unit in unitCounts" :key="unit.label"><span class="unit-label" :title="unit.label">{{ unit.label }}</span><div class="unit-track"><span class="unit-fill" :style="{ width: `${unit.count / maxUnitCount * 100}%` }"></span></div><strong>{{ unit.count }}</strong></li></ol>
-                <p v-if="dashboard.unitCounts?.length > 8" class="chart-note mt-4">Menampilkan 8 dari {{ dashboard.unitCounts.length }} unit dengan jumlah terbanyak.</p>
+                <p v-if="dashboard.unitCounts?.length > 8" class="chart-note mt-4">Menampilkan 8 Unit Kerja dengan jumlah terbanyak.</p>
               </section>
             </div>
             <div class="dashboard-columns mt-5">
               <section class="dashboard-panel latest-panel" aria-labelledby="latest-title">
-                <h2 id="latest-title" class="text-lg font-semibold">Pencatatan terbaru</h2>
+                <h2 id="latest-title" class="text-lg font-semibold">Surat Masuk Terbaru</h2>
                 <p v-if="!dashboard.latest?.length" class="empty-state mt-3 text-sm text-slate-700">Belum ada surat dalam daftar terbaru.</p>
                 <div v-else class="latest-scroll mt-4" tabindex="0" role="region" aria-label="Pencatatan terbaru, geser untuk melihat semua kolom">
                   <table class="latest-table">
-                    <thead><tr><th scope="col">Agenda</th><th scope="col">Tanggal diterima</th><th scope="col">Perihal</th><th scope="col">Asal surat</th><th scope="col">Posisi surat</th></tr></thead>
-                    <tbody><tr v-for="record in dashboard.latest" :key="`${record.rowHint}-${record.agenda}`"><td class="font-semibold tabular-nums">{{ display(record.agenda) }}</td><td>{{ display(record.receivedDate) }}</td><td>{{ display(record.subject) }}</td><td>{{ display(record.sender) }}</td><td><span class="letter-position">{{ formatPosition(record.letterPosition) }}</span></td></tr></tbody>
+                    <thead><tr><th scope="col">Agenda</th><th scope="col">Tanggal Diterima</th><th scope="col">Perihal</th><th scope="col">Asal Surat</th><th scope="col">Unit Tujuan</th></tr></thead>
+                    <tbody><tr v-for="record in dashboard.latest" :key="`${record.rowHint}-${record.agenda}`"><td class="font-semibold tabular-nums">{{ display(record.agenda) }}</td><td>{{ display(record.receivedDate) }}</td><td>{{ display(record.subject) }}</td><td>{{ display(record.sender) }}</td><td>{{ display(record.dispositionTargets) }}</td></tr></tbody>
                   </table>
                 </div>
               </section>

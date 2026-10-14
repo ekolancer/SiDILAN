@@ -114,11 +114,18 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .app-welcome-header { position: relative; isolation: isolate; overflow: hidden; border-bottom-color: #c4d8e8; background: radial-gradient(ellipse at 0% 0%, #dcecf8 0%, transparent 62%), linear-gradient(100deg, #eef6fc 0%, #f7faff 58%, #fff3e8 100%); }
 .app-welcome-header::after { position: absolute; z-index: -1; top: -4rem; right: 10%; width: 14rem; aspect-ratio: 1; border-radius: 50%; background: #c9deef; opacity: .45; filter: blur(2.5rem); content: ''; pointer-events: none; }
 .app-welcome-header .app-header-inner { min-height: 6.25rem; padding-block: 1.25rem; }
-.app-welcome p { color: #0b2745; font-size: 1.3rem; font-weight: 700; letter-spacing: -.025em; line-height: 1.25; text-wrap: balance; }
-.app-welcome span { display: block; margin-top: .3rem; color: #334f68; font-size: .86rem; line-height: 1.45; }
-.app-welcome-header .app-account { position: relative; z-index: 1; padding: .55rem .75rem; border: 1px solid #c8dced; border-radius: .55rem; background: rgb(255 255 255 / .72); }
-.app-welcome-header .app-role { color: #0b2745; }
-.app-welcome-header .app-email { color: #3b5872; }
+.app-welcome { min-width: 0; }
+.app-welcome p { color: #0b2745; font-size: 1.25rem; font-weight: 700; letter-spacing: -.025em; line-height: 1.3; overflow-wrap: anywhere; }
+.app-welcome .welcome-email { color: #31536f; font-size: .9em; font-weight: 500; letter-spacing: 0; }
+.app-welcome blockquote { margin: .45rem 0 0; color: #334f68; font-size: .88rem; line-height: 1.45; }
+.app-header-tools { display: flex; align-items: center; gap: .9rem; flex: none; }
+.jakarta-clock { display: grid; grid-template-columns: auto auto; align-items: baseline; column-gap: .4rem; padding: .45rem .7rem; border: 1px solid #c8dced; border-radius: .55rem; background: rgb(255 255 255 / .76); color: #0b2745; font-variant-numeric: tabular-nums; }
+.clock-label { grid-column: 1 / -1; color: #465e75; font-size: .68rem; line-height: 1.3; }
+.jakarta-clock strong { font-size: 1rem; font-weight: 650; }
+.clock-zone { color: #31536f; font-size: .72rem; font-weight: 600; }
+.app-welcome-header .app-account { position: relative; z-index: 1; padding: 0; }
+.account-avatar { display: grid; place-items: center; width: 2.75rem; aspect-ratio: 1; border: 1px solid #c4d8e8; border-radius: .75rem; background: #e5f0f8; color: #0b568d; }
+.account-avatar svg { width: 1.4rem; height: 1.4rem; stroke-width: 1.8; }
 .app-account { display: grid; justify-items: end; min-width: 0; line-height: 1.4; }
 .app-role { font-size: .85rem; font-weight: 600; }
 .app-email { max-width: min(36vw, 26rem); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #52647a; font-size: .76rem; }
@@ -155,8 +162,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .sidebar-caption { display: none; }
   .app-main { padding: 1.25rem 1rem 3rem; }
   .app-header-inner { padding: 1rem; }
-  .app-welcome-header .app-header-inner { min-height: 5.5rem; padding-block: 1rem; }
-  .app-welcome-header .app-email { max-width: 38vw; }
+  .app-welcome-header .app-header-inner { min-height: 5.5rem; padding: .85rem 1rem; align-items: flex-start; }
+  .app-welcome p { font-size: 1.05rem; }
+  .app-welcome blockquote { max-width: 35ch; font-size: .78rem; }
+  .app-header-tools { gap: .5rem; }
+  .jakarta-clock { padding: .4rem .5rem; }
+  .clock-label { font-size: .6rem; }
+  .jakarta-clock strong { font-size: .9rem; }
+  .account-avatar { width: 2.4rem; border-radius: .65rem; }
   .app-nav { display: flex; overflow-x: auto; margin-top: 1rem; gap: .25rem; scrollbar-width: thin; }
   .app-nav-link { width: auto; padding-inline: .75rem; font-size: .8rem; gap: .4rem; }
   .letter-row { grid-template-columns: minmax(0, 1fr); gap: .9rem; padding-inline: 0; }
@@ -180,12 +193,12 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .dashboard-columns { display: grid; gap: 1.25rem; }
 .dashboard-charts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr) minmax(0, 1fr); gap: 1.25rem; align-items: stretch; }
 .chart-note { color: #52647a; font-size: .78rem; line-height: 1.45; }
-.donut-layout { display: flex; align-items: center; gap: 1.3rem; flex-wrap: wrap; }
-.status-donut { display: grid; flex: none; place-items: center; width: clamp(8rem, 12vw, 11rem); aspect-ratio: 1; border-radius: 50%; }
+.donut-layout { display: grid; justify-items: center; gap: 1.3rem; }
+.status-donut { display: grid; place-items: center; width: clamp(8rem, 12vw, 11rem); aspect-ratio: 1; border-radius: 50%; }
 .status-donut > div { display: grid; align-content: center; width: 66%; aspect-ratio: 1; border-radius: 50%; background: #fff; text-align: center; }
 .status-donut strong { font-size: 1.65rem; line-height: 1; font-variant-numeric: tabular-nums; }
 .status-donut span { font-size: .75rem; color: #52647a; }
-.status-legend { flex: 1; min-width: 8rem; font-size: .8rem; }
+.status-legend { width: min(100%, 16rem); font-size: .8rem; }
 .status-legend > div { display: flex; justify-content: space-between; gap: .75rem; margin-block: .4rem; }
 .status-legend dt { display: flex; align-items: center; gap: .45rem; }
 .status-legend dt::before { content: ''; flex: none; width: .65rem; height: .65rem; border-radius: 50%; background: #228c77; }
@@ -197,7 +210,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .trend-key .outgoing-key::before { background: #228c77; }
 .trend-scroll { max-width: 100%; overflow-x: auto; }
 .trend-scroll:focus-visible { outline: 2px solid #1263a0; outline-offset: 2px; }
-.trend-svg { display: block; width: 100%; min-width: 36rem; height: auto; }
+.trend-svg { display: block; max-width: none; height: 215px; }
 .trend-gridline { fill: none; stroke: #dce5ee; stroke-width: 1; }
 .trend-incoming, .trend-outgoing { fill: none; stroke: #1263a0; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .trend-outgoing { stroke: #228c77; }

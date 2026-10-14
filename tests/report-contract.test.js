@@ -29,10 +29,21 @@ assert.equal(dashboard.withFollowup, 3);
 assert.deepEqual(dashboard.statusCounts, { selesai: 1, dalamProses: 1, lewatBatasWaktu: 1 });
 assert.equal(dashboard.unclassifiedStatus, 0);
 assert.deepEqual(dashboard.unitCounts, [{ label: 'Subbag TU', count: 2 }, { label: 'Bidang Logistik', count: 1 }]);
-assert.equal(dashboard.trend.length, 12);
-assert.deepEqual(dashboard.trend.slice(-2), [{ month: '2026-09', incoming: 1, outgoing: null }, { month: '2026-10', incoming: 1, outgoing: null }]);
+assert.equal(dashboard.trend.length, 2);
+assert.deepEqual(dashboard.trend, [{ month: '2026-09', incoming: 1, outgoing: null }, { month: '2026-10', incoming: 1, outgoing: null }]);
+assert.equal(dashboard.latest[0].dispositionTargets, '');
 assert.equal(dashboard.outgoingUnavailable, true);
 assert.equal(dashboard.latest[0].agenda, '3');
+const recentByMonth = [{ ...records[0], receivedDateKey: '2025-12-14' }, { ...records[2], receivedDateKey: '2026-02-13' }];
+context.readRegister_ = () => ({ records: recentByMonth, warningCount: 0 });
+assert.deepEqual(own(context.getDashboardStats()).trend, [
+  { month: '2025-12', incoming: 1, outgoing: null },
+  { month: '2026-01', incoming: 0, outgoing: null },
+  { month: '2026-02', incoming: 1, outgoing: null },
+]);
+context.readRegister_ = () => ({ records: [{ ...records[1], receivedDateKey: '' }], warningCount: 0 });
+assert.deepEqual(own(context.getDashboardStats()).trend, []);
+context.readRegister_ = () => ({ records, warningCount: 1 });
 
 outgoingProperties = { OUTGOING_SPREADSHEET_ID: 'outgoing', OUTGOING_SHEET_NAME: 'SuratKeluar' };
 context.SpreadsheetApp = { openById: id => {

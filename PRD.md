@@ -130,7 +130,7 @@ Tidak ada pengajuan penutupan, buka kembali surat, tahapan wajib, atau antrean r
 | Memiliki disposisi | Baris dengan H tidak kosong; tidak berarti disposisi sudah diverifikasi |
 | Memiliki keterangan tindak lanjut | Baris dengan M tidak kosong; tidak berarti surat selesai |
 | Status tindak lanjut | Hitungan label persis di kolom M; nilai lain/blank dilaporkan terpisah |
-| Tren surat | 12 bulan terakhir; masuk dari tanggal diterima B, keluar dari header Tanggal Surat pada spreadsheet terpisah jika dikonfigurasi |
+| Tren surat | Bulan dari tanggal diterima B paling awal hingga paling akhir di register, termasuk bulan kosong; keluar dari header Tanggal Surat pada spreadsheet terpisah dalam rentang sama jika dikonfigurasi |
 | Surat per unit tujuan | Hitungan tujuan disposisi I, dipisah koma/titik koma; satu unit dihitung sekali per surat |
 
 Filter periode menggunakan tanggal diterima. Tanggal yang tidak dapat dipahami tidak ditebak dan disebutkan jumlahnya pada rekap periode. Total pencatatan tetap dapat dihitung tanpa tanggal. Jika variasi label posisi ingin digabung pada grafik, tampilkan aturan penggabungan dan biarkan nilai sumber tetap utuh.
