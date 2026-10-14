@@ -14,10 +14,12 @@ for (let row = 10; row < rows.length; row++) {
   rows[row][6] = `=IF(B${row + 1}="","",C${row + 1}&" - "&F${row + 1})`;
 }
 const formulas = rows.map(row => row.map(value => typeof value === 'string' && value.startsWith('=') ? value : ''));
+let rangeCalls = 0;
 const sheet = {
   getLastRow: () => rows.length,
   getLastColumn: () => 14,
   getRange(startRow, startCol, numRows, numCols) {
+    rangeCalls++;
     const selected = rows.slice(startRow - 1, startRow - 1 + numRows).map(row => row.slice(startCol - 1, startCol - 1 + numCols));
     const selectedFormulas = formulas.slice(startRow - 1, startRow - 1 + numRows).map(row => row.slice(startCol - 1, startCol - 1 + numCols));
     return {
@@ -31,6 +33,7 @@ const sheet = {
 };
 const records = [{ rowHint: 10, agenda: '354.a' }];
 assert.equal(context.findSafeTemplateRow_(sheet, records), null, 'template formulas should prevent destructive reuse');
+assert.equal(rangeCalls, 2, 'template scan should use batch reads, not a call per row');
 assert.equal(context.safeInsertRow_(sheet, records), 11, 'fallback inserts immediately after final real record');
 rows[10][6] = '';
 formulas[10][6] = '';

@@ -71,7 +71,7 @@
 - [x] Buka spreadsheet melalui `SPREADSHEET_ID` server-side dan periksa tab/header sebelum membaca; verifikasi ulang pada deployment uji masih diperlukan.
 - [x] Baca A:N secara batch untuk nilai, tampilan, formula, dan rich text; baca validasi posisi secara batch.
 - [x] Bentuk record 14 kolom dengan `rowHint` dan hash snapshot sementara, tanpa menambah kolom sumber.
-- [x] Kirim tanggal sebagai string tampilan (bukan objek `Date`) dan pertahankan teks tanggal mentah. Parser tanggal Indonesia/normalisasi tanggal khusus belum ada.
+- [x] Kirim tanggal `B`/`D` sebagai ISO `yyyy-MM-dd` dari nilai Date/serial atau tanggal teks Indonesia agar form date dapat mengisi ulang; nilai tanggal tak dikenal tetap teks mentah.
 - [x] Ekstrak URL HTTPS dari rich text/formula `HYPERLINK` sederhana/URL literal tanpa mengeksekusi formula sebagai JavaScript.
 - [ ] Uji bahwa agenda angka/teks/suffix, nol depan nomor surat, tujuan majemuk, formula, tanggal dan label hyperlink tetap benar pada data salinan; nilai tampilan digunakan di respons.
 - [x] Ambil pilihan posisi dari validasi tab dan nilai posisi tersimpan; belum diuji untuk seluruh bentuk validasi live.
@@ -147,8 +147,8 @@
 **Prasyarat:** pemilik menyatakan Tahap 5 lulus pada spreadsheet salinan (2026-10-14); detail hasil uji tidak disertakan dalam sesi ini.
 
 **Pekerjaan**
-- [x] Form edit detail untuk WRITE mendukung field B:F dan H:N yang relevan; A tetap tidak dapat diedit. G tidak diedit langsung.
-- [x] Saat buka edit, UI menyimpan snapshot nilai baseline dan mengirim hash server untuk seluruh A:N.
+- [x] Form edit detail untuk WRITE mendukung field B:F dan H:N yang relevan; A tetap tidak dapat diedit. G tidak diedit langsung kecuali opsi regenerasi eksplisit.
+- [x] Saat buka edit, UI menyimpan snapshot nilai baseline dan mengirim hash server untuk seluruh A:N. Tanggal B/D diserialisasi ke ISO agar field tanggal terisi dengan nilai yang dapat diedit.
 - [x] Saat simpan, server mengambil lock, memvalidasi agenda/baris unik dan hash seluruh baris; konflik menolak sebelum write.
 - [x] Validasi server dilakukan pada field yang dikirim saja; validasi tanggal, URL HTTPS, batas panjang dan field identitas wajib saat diubah.
 - [x] Tulis hanya sel berubah dengan satu batch request per sel; tanggal ditulis sebagai serial numerik, teks sebagai string literal. Formula/format sel lain tidak ditulis oleh field mask `userEnteredValue`.
@@ -221,4 +221,5 @@ Perbarui checkbox dan catatan singkat di sini saat tiap item selesai. Jangan tan
 | 2026-10-14 | Tahap 5 | Pemilik menyatakan Tahap 5 lulus pada spreadsheet salinan dan meminta Tahap 6. | Disetujui pemilik | Detail hasil uji tidak tercatat pada sesi ini; tidak ada write spreadsheet dari sesi ini. |
 | 2026-10-14 | Tahap 6 lokal | Implementasi update parsial, hash konflik A:N, unique agenda guard, validasi dirty fields, batch write terbatas, edit penuh/quick H/I/J/L/M, dan pilihan rebuild G. Uji kontrak dan build lulus. | Implementasi lokal; gerbang belum lulus | Uji integrasi konflik/readback, preservasi formula/hyperlink/format pada spreadsheet salinan belum dilakukan; belum deploy. |
 | 2026-10-14 | Tahap 7–8 lokal | Backend dashboard/rekap dari register yang sama, parser tanggal numerik/teks Indonesia, UI ringkasan, filter periode, preview 14 kolom, cetak landscape dan CSV aman dengan opsi URL. Uji kontrak/CSV/build lulus. | Kode siap uji salinan; gerbang belum lulus | Hitungan data nyata, mobile/desktop, cetak, dataset besar dan kesesuaian filter harus diuji pada salinan. |
+| 2026-10-14 | Kendala tahap tambah | Repro lokal mengonfirmasi pemindaian template melakukan pembacaan per baris, tanggal serial ditampilkan tanpa format dan uraian G tidak cocok dengan template. | Perbaikan lokal; perlu deploy/uji salinan | Simpan tanggal kini mengatur format `dd mmmm yyyy`; parser baca mengubah serial/teks tanggal Indonesia ke ISO; uraian G mengikuti format template; pencarian template memakai batch read dan agenda surat nyata. Belum diuji di deployment. |
 | 2026-10-14 | Tahap 9 lokal | Manifest execute-as-user/akun Google, penolakan CI bila deployment ID kosong, minimisasi izin workflow, rollback terdokumentasi, pesan error UI umum, perbaikan regenerasi G, dan pemilihan template aman plus insert fallback atomik. Tes konflik/write terbatas/template/CSV dan build lulus; dependency runtime tanpa advisory high. | Hardening lokal; rilis production belum disetujui | AC-01–AC-12, permission/deployment aktual, smoke test baca/tulis dan persetujuan terpisah tetap wajib. Tidak ada push/deploy/sheet write dari sesi ini. |

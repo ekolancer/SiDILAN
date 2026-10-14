@@ -36,7 +36,9 @@ assert.equal(newRow[0], '355');
 assert.equal(newRow[1], 46309);
 assert.equal(newRow[2], '001/ABC');
 assert.equal(newRow[3], 46308);
-assert.match(newRow[6], /13 Oktober 2026/);
+assert.equal(newRow[6], 'Surat Dari Unit Uji Nomor 001/ABC Tanggal 13 Oktober 2026 Tentang Surat uji.');
+assert.equal(context.receivedDateKey_(newRow[1], ''), '2026-10-14');
+assert.equal(context.receivedDateKey_(newRow[3], ''), '2026-10-13');
 assert.equal(context.findDuplicateCandidates_([{ agenda: '354.a', letterNumber: '001/ABC', sender: 'Unit Uji', subject: 'Surat uji' }], validCreate).length, 1);
 
 const validUpdate = { rowHint: 12, agenda: '354.a', expectedHash: 'snapshot-hash', changes: { followupNote: 'Tindak lanjut baru' } };

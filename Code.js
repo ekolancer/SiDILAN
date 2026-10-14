@@ -205,8 +205,8 @@ function buildRecord_(rowHint, values, displays, formulas, richTextValues) {
   const fields = {};
   FIELD_NAMES_.forEach((field, index) => {
     const value = values[index];
-    fields[field] = (field === 'receivedDate' || field === 'letterDate') && value instanceof Date
-      ? Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd')
+    fields[field] = (field === 'receivedDate' || field === 'letterDate')
+      ? receivedDateKey_(value, displays[index]) || displays[index] || ''
       : displays[index] || '';
   });
   const links = {
@@ -422,8 +422,8 @@ function updateSuratMasuk(payload) {
         const nextIdentity = { ...current, ...changes };
         const letterDate = nextIdentity.letterDate && isValidIsoDate_(nextIdentity.letterDate)
           ? formatDateId_(nextIdentity.letterDate)
-          : nextIdentity.letterDate || 'Tanggal surat belum tersedia';
-        changes.documentDescription = `${nextIdentity.sender} - ${nextIdentity.letterNumber} - ${letterDate} - ${nextIdentity.subject}`;
+          : nextIdentity.letterDate || 'belum tersedia';
+        changes.documentDescription = `Surat Dari ${nextIdentity.sender} Nomor ${nextIdentity.letterNumber} Tanggal ${letterDate} Tentang ${nextIdentity.subject}.`;
       }
       const changedFields = Object.keys(changes).filter(field => String(changes[field]) !== String(current[field]));
       if (!changedFields.length) throw new Error('NO_CHANGES');
@@ -442,6 +442,10 @@ function updateSuratMasuk(payload) {
           : value === '' ? {} : { stringValue: String(value) };
         const cellData = { userEnteredValue: cellValue };
         const fields = ['userEnteredValue'];
+        if ((field === 'receivedDate' || field === 'letterDate') && value) {
+          cellData.userEnteredFormat = { numberFormat: { type: 'DATE', pattern: 'dd mmmm yyyy' } };
+          fields.push('userEnteredFormat.numberFormat');
+        }
         if (field === 'letterFileReference' || field === 'followupReference') {
           cellData.textFormatRuns = [];
           fields.push('textFormatRuns', 'userEnteredFormat.textFormat.link');
@@ -529,10 +533,13 @@ function createSuratMasuk(payload) {
       } });
       requests.push({ updateCells: {
         range: { sheetId, startRowIndex: row - 1, endRowIndex: row, startColumnIndex: 0, endColumnIndex: FIELD_NAMES_.length },
-        rows: [{ values: values.map((value, index) => ({ userEnteredValue: index === 1 || (index === 3 && value !== '')
-          ? { numberValue: value }
-          : value === '' ? {} : { stringValue: String(value) } })) }],
-        fields: 'userEnteredValue'
+        rows: [{ values: values.map((value, index) => ({
+          userEnteredValue: index === 1 || (index === 3 && value !== '')
+            ? { numberValue: value }
+            : value === '' ? {} : { stringValue: String(value) },
+          ...(index === 1 || index === 3 && value !== '' ? { userEnteredFormat: { numberFormat: { type: 'DATE', pattern: 'dd mmmm yyyy' } } } : {})
+        })) }],
+        fields: 'userEnteredValue,userEnteredFormat.numberFormat'
       } });
       Sheets.Spreadsheets.batchUpdate({ requests }, config.spreadsheetId);
       SpreadsheetApp.flush();
@@ -581,12 +588,10 @@ function findDuplicateCandidates_(records, payload) {
 }
 
 function nextAgenda_(sheet, records) {
-  const existing = new Set();
-  const lastRow = sheet.getLastRow();
-  if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, 1).getDisplayValues().forEach(([value]) => existing.add(String(value).trim()));
   const numericAgendas = records.map(record => /^\d+$/.test(record.agenda.trim()) ? Number(record.agenda.trim()) : 0);
+  const occupied = new Set(records.map(record => String(record.agenda).trim()));
   let next = Math.max(0, ...numericAgendas) + 1;
-  while (existing.has(String(next))) next++;
+  while (occupied.has(String(next))) next++;
   return String(next);
 }
 
@@ -595,18 +600,21 @@ function findSafeTemplateRow_(sheet, records) {
   const lastRow = sheet.getLastRow();
   if (lastRecordRow >= lastRow) return null;
   const width = Math.max(FIELD_NAMES_.length, sheet.getLastColumn());
+  const rowCount = lastRow - lastRecordRow;
+  const scan = sheet.getRange(lastRecordRow + 1, 1, rowCount, width);
+  const values = scan.getValues();
+  const formulas = scan.getFormulas();
+  const notes = scan.getNotes();
   const mergedRanges = sheet.getRange(1, 1, lastRow, width).getMergedRanges();
   const occupiedAgenda = new Set(records.map(record => String(record.agenda).trim()));
-  for (let row = lastRecordRow + 1; row <= lastRow; row++) {
+  for (let index = 0; index < rowCount; index++) {
+    const row = lastRecordRow + index + 1;
     if (mergedRanges.some(range => row >= range.getRow() && row <= range.getLastRow())) continue;
-    const range = sheet.getRange(row, 1, 1, width);
-    const values = range.getValues()[0];
-    const formulas = range.getFormulas()[0];
-    const notes = range.getNotes()[0];
-    const agenda = String(values[0] == null ? '' : values[0]).trim();
-    if (!/^\d+$/.test(agenda) || !values[6] || typeof values[6] !== 'string' || occupiedAgenda.has(agenda)) continue;
-    const hasUnsafeContent = values.some((value, index) => value !== '' && index !== 0 && index !== 6) ||
-      formulas.some(Boolean) || notes.some(Boolean);
+    const cells = values[index];
+    const agenda = String(cells[0] == null ? '' : cells[0]).trim();
+    if (!/^\d+$/.test(agenda) || !cells[6] || typeof cells[6] !== 'string' || occupiedAgenda.has(agenda)) continue;
+    const hasUnsafeContent = cells.some((value, column) => value !== '' && column !== 0 && column !== 6) ||
+      formulas[index].some(Boolean) || notes[index].some(Boolean);
     if (!hasUnsafeContent) return row;
   }
   return null;
@@ -625,8 +633,8 @@ function safeInsertRow_(sheet, records) {
 function buildNewRow_(payload, agenda) {
   const receivedDate = parseIsoDate_(payload.receivedDate);
   const letterDate = payload.letterDate ? parseIsoDate_(payload.letterDate) : '';
-  const descriptionDate = payload.letterDate ? formatDateId_(payload.letterDate) : 'Tanggal surat belum tersedia';
-  const description = `${payload.sender.trim()} - ${payload.letterNumber.trim()} - ${descriptionDate} - ${payload.subject.trim()}`;
+  const descriptionDate = payload.letterDate ? formatDateId_(payload.letterDate) : 'belum tersedia';
+  const description = `Surat Dari ${payload.sender.trim()} Nomor ${payload.letterNumber.trim()} Tanggal ${descriptionDate} Tentang ${payload.subject.trim()}.`;
   return [agenda, receivedDate, payload.letterNumber.trim(), letterDate, payload.sender.trim(), payload.subject.trim(), description,
     payload.disposition || '', payload.dispositionTargets || '', payload.parafDateOrNote || '', payload.letterFileReference || '',
     payload.letterPosition || '', payload.followupNote || '', payload.followupReference || ''];
