@@ -29,7 +29,8 @@ Menu Disposisi, Penugasan, Tugas Saya, Review, Arsip, Surat Keluar dan WhatsApp 
 | --- | --- |
 | Navigasi | Sidebar navy 224 px dengan tiga menu dan ikon; menu aktif berwarna biru. Pada mobile menjadi navigasi horizontal |
 | Header | Header putih berisi sapaan, peran dan identitas akun; tombol Muat ulang pada tampilan terkait |
-| Latar halaman | `#F4F7FB`; panel putih dengan border ringan. Kartu statistik memakai tint biru, hijau, kuning dan abu kebiruan seperti referensi |
+| Latar halaman | Biru-abu muda `#F2F6FA`; panel putih berbatas biru lembut. Area filter dan tabel memakai tint biru pucat untuk membantu pemindaian |
+| Peran warna | Navy untuk hierarki/teks, biru untuk aksi dan data masuk, oranye untuk penekanan brand, hijau untuk status selesai/keluar, amber untuk proses/peringatan, merah untuk lewat batas waktu/error |
 | Warna merek | Navy `#0B2745`, biru `#1263A0`, oranye `#F47A14` |
 | Teks | Utama `#172B4D`, sekunder `#52647A` |
 | Tipografi | Outfit lokal dengan fallback sistem; body 14–16 px; judul responsif 25–32 px |

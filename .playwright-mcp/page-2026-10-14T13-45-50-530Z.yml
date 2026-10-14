@@ -1,0 +1,15 @@
+- generic [ref=e3]:
+  - link "Lewati ke konten utama" [ref=e4] [cursor=pointer]:
+    - /url: "#main-content"
+  - complementary "Menu SiDILAN" [ref=e5]:
+    - paragraph [ref=e6]: SiDILAN
+    - paragraph [ref=e7]: Sistem Digital MonitoringTindak Lanjut Surat
+  - banner [ref=e8]:
+    - generic [ref=e10]:
+      - paragraph [ref=e11]: Selamat Datang
+      - generic [ref=e12]: Register surat masuk
+  - main [ref=e13]:
+    - alert [ref=e14]:
+      - heading "Akses aplikasi belum tersedia" [level=1] [ref=e15]
+      - paragraph [ref=e16]: Aplikasi harus dibuka melalui deployment Google Apps Script.
+      - button "Coba lagi" [ref=e17]

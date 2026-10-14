@@ -1,0 +1,37 @@
+- generic [ref=e3]:
+  - link "Lewati ke konten utama" [ref=e4] [cursor=pointer]:
+    - /url: "#main-content"
+  - complementary "Menu SiDILAN" [ref=e5]:
+    - paragraph [ref=e6]: SiDILAN
+    - navigation "Navigasi utama" [ref=e18]:
+      - button "Dashboard" [ref=e19]
+      - button "Daftar surat" [active] [ref=e20]
+      - button "Rekap surat" [ref=e21]
+  - banner [ref=e8]:
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - paragraph [ref=e11]: Selamat Datang
+        - generic [ref=e12]: Register surat masuk
+      - generic [ref=e22]:
+        - generic [ref=e23]: Administrator
+        - generic [ref=e24]: pencatat@example.go.id
+  - main [ref=e13]:
+    - generic [ref=e194]:
+      - generic [ref=e195]:
+        - heading "Daftar surat masuk" [level=1] [ref=e196]
+        - button "Tambah surat" [ref=e197]
+      - search [ref=e198]:
+        - generic [ref=e199]: Kata kunci pencarian
+        - textbox "Kata kunci pencarian" [ref=e200]:
+          - /placeholder: Cari agenda, nomor surat, asal, atau perihal
+        - button "Cari" [ref=e201]
+      - generic [ref=e202]:
+        - generic [ref=e203]:
+          - generic [ref=e204]: Posisi surat
+          - combobox "Posisi surat" [ref=e205]:
+            - generic: Semua posisi
+        - button "Reset" [ref=e206]
+        - button "Muat ulang" [ref=e207]
+      - generic [ref=e208]:
+        - paragraph [ref=e212]: Temukan surat yang Anda perlukan
+        - paragraph [ref=e213]: Cari berdasarkan agenda, nomor surat, asal, atau perihal.

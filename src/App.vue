@@ -398,11 +398,11 @@ onMounted(loadInitial)
       </nav>
       <p class="sidebar-caption">Sistem Digital Monitoring<br>Tindak Lanjut Surat</p>
     </aside>
-    <header class="app-header print:hidden">
+    <header class="app-header app-welcome-header print:hidden">
       <div class="app-header-inner">
-        <div class="app-welcome"><p>Selamat datang</p><span>Register surat masuk</span></div>
+        <div class="app-welcome"><p>Selamat Datang</p><span>Register surat masuk</span></div>
         <div v-if="role" class="app-account">
-          <span class="app-role">{{ role === 'WRITE' ? 'Pencatat' : 'Pembaca' }}</span>
+          <span class="app-role">{{ role === 'WRITE' ? 'Administrator' : 'Viewer' }}</span>
           <span v-if="email" class="app-email">{{ email }}</span>
         </div>
       </div>
@@ -421,7 +421,7 @@ onMounted(loadInitial)
       </section>
 
       <template v-else>
-        <section v-if="activeView === 'dashboard'" class="dashboard-view" aria-labelledby="dashboard-title">
+        <section v-if="activeView === 'dashboard'" class="dashboard-view page-dashboard" aria-labelledby="dashboard-title">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <h1 id="dashboard-title" class="text-2xl font-semibold tracking-tight">Ringkasan surat masuk</h1>
             <Button variant="outline" :disabled="dashboardLoading" @click="loadDashboard"><RotateCw class="h-4 w-4" aria-hidden="true" /> Muat ulang</Button>
@@ -489,7 +489,7 @@ onMounted(loadInitial)
           </template>
         </section>
 
-        <section v-if="activeView === 'report'" class="workspace-panel report-section rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6" aria-labelledby="report-title">
+        <section v-if="activeView === 'report'" class="workspace-panel report-section page-report rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6" aria-labelledby="report-title">
           <div class="report-controls">
             <h1 id="report-title" class="text-2xl font-semibold tracking-tight">Rekap surat masuk</h1>
             <p class="mt-1 text-sm text-slate-700">Pratinjau seluruh 14 kolom. Filter periode memakai tanggal diterima.</p>
@@ -528,7 +528,7 @@ onMounted(loadInitial)
           </template>
         </section>
 
-        <section v-if="activeView === 'list'" class="workspace-panel rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
+        <section v-if="activeView === 'list'" class="workspace-panel page-list rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <h1 class="text-2xl font-semibold tracking-tight">Daftar surat masuk</h1>
             <Button v-if="role === 'WRITE'" @click="openCreate">Tambah surat</Button>
@@ -583,7 +583,7 @@ onMounted(loadInitial)
           </nav>
         </section>
 
-        <section v-if="activeView === 'list' && showCreate" class="workspace-panel mt-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-6" aria-labelledby="create-title">
+        <section v-if="activeView === 'list' && showCreate" class="workspace-panel page-create mt-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-6" aria-labelledby="create-title">
           <div class="flex items-start justify-between gap-4">
             <div><h2 id="create-title" class="text-xl font-semibold">Pencatatan surat baru</h2><p class="mt-1 text-sm text-slate-700">Nomor agenda dibuat otomatis saat disimpan.</p></div>
             <Button variant="ghost" size="icon" aria-label="Tutup formulir" :disabled="createBusy" @click="showCreate = false"><X class="h-5 w-5" aria-hidden="true" /></Button>
@@ -614,7 +614,7 @@ onMounted(loadInitial)
           </form>
         </section>
 
-        <section v-if="activeView === 'list' && detail" class="workspace-panel mt-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-6" aria-labelledby="detail-title">
+        <section v-if="activeView === 'list' && detail" class="workspace-panel page-detail mt-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-6" aria-labelledby="detail-title">
           <div class="flex items-start justify-between gap-4">
             <div class="min-w-0"><h2 id="detail-title" class="break-words text-xl font-semibold">{{ detailLoading ? 'Memuat detail...' : display(detail.subject) }}</h2><p class="mt-1 text-sm text-slate-700">Nomor agenda: {{ display(detail.agenda) }}</p></div>
             <div class="flex gap-2">
