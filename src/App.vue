@@ -24,7 +24,12 @@ const records = ref([])
 const total = ref(0)
 const warningCount = ref(0)
 const page = ref(1)
-const pageSize = ref(50)
+const pageSize = ref(10)
+const pageNumbers = computed(() => {
+  if (pageCount.value <= 7) return Array.from({ length: pageCount.value }, (_, index) => index + 1)
+  const start = page.value <= 4 ? 1 : page.value >= pageCount.value - 3 ? pageCount.value - 4 : page.value - 2
+  return Array.from({ length: 5 }, (_, index) => start + index)
+})
 const detail = ref(null)
 const detailLoading = ref(false)
 const detailError = ref('')
@@ -128,7 +133,7 @@ async function loadInitial() {
     email.value = result.email
     role.value = result.role
     await loadPositions()
-    loadDashboard()
+    await Promise.all([loadDashboard(), search()])
   } catch (error) {
     statusError.value = error.message === 'APPS_SCRIPT_UNAVAILABLE'
       ? 'Aplikasi harus dibuka melalui deployment Google Apps Script.'
@@ -155,13 +160,6 @@ async function loadPositions() {
 
 async function search(resetPage = true, preserveDetail = false) {
   const trimmed = keyword.value.trim()
-  if (!trimmed) {
-    records.value = []
-    total.value = 0
-    emptyMessage.value = 'Masukkan kata kunci pencarian.'
-    listError.value = ''
-    return
-  }
   if (resetPage) page.value = 1
   const currentRequest = ++requestId
   listLoading.value = true
@@ -172,6 +170,7 @@ async function search(resetPage = true, preserveDetail = false) {
       keyword: trimmed,
       positions: selectedPosition.value === null ? undefined : [selectedPosition.value === 0 ? '' : selectedPosition.value],
       page: page.value,
+      pageSize: pageSize.value,
     })
     if (currentRequest !== requestId) return
     if (!result?.success) {
@@ -181,7 +180,7 @@ async function search(resetPage = true, preserveDetail = false) {
     records.value = result.records || []
     total.value = result.total || 0
     page.value = result.page || 1
-    pageSize.value = result.pageSize || 50
+    pageSize.value = result.pageSize || 10
     allPositions.value = result.positions || allPositions.value
     warningCount.value = result.warningCount || 0
     emptyMessage.value = total.value ? `${total.value} pencatatan ditemukan.` : 'Tidak ada data yang cocok.'
@@ -196,11 +195,15 @@ function resetSearch() {
   keyword.value = ''
   selectedPosition.value = null
   page.value = 1
-  records.value = []
-  total.value = 0
   listError.value = ''
-  emptyMessage.value = 'Masukkan kata kunci pencarian.'
   detail.value = null
+  search()
+}
+
+function changePageSize(event) {
+  pageSize.value = Number(event.target.value)
+  page.value = 1
+  search(false)
 }
 
 async function openDetail(record) {
@@ -422,7 +425,7 @@ onUnmounted(() => clearInterval(clockTimer))
     <aside class="app-sidebar print:hidden" aria-label="Menu SiDILAN">
       <p class="app-wordmark">SiDILAN</p>
       <nav v-if="!loadingStatus && !statusError" class="app-nav" aria-label="Navigasi utama">
-        <Button v-for="view in [['dashboard', 'Dashboard', LayoutDashboard], ['list', 'Daftar surat', Inbox], ['report', 'Rekap surat', FileChartColumn]]" :key="view[0]" variant="ghost" class="app-nav-link" :class="{ 'is-current': activeView === view[0] }" :aria-current="activeView === view[0] ? 'page' : undefined" @click="switchView(view[0])"><component :is="view[2]" aria-hidden="true" />{{ view[1] }}</Button>
+        <Button v-for="view in [['dashboard', 'Dashboard', LayoutDashboard], ['list', 'Daftar Surat Masuk', Inbox], ['report', 'Rekap Surat Masuk', FileChartColumn]]" :key="view[0]" variant="ghost" class="app-nav-link" :class="{ 'is-current': activeView === view[0] }" :aria-current="activeView === view[0] ? 'page' : undefined" @click="switchView(view[0])"><component :is="view[2]" aria-hidden="true" />{{ view[1] }}</Button>
       </nav>
       <p class="sidebar-caption">Sistem Digital Monitoring<br>Tindak Lanjut Surat</p>
     </aside>
@@ -600,9 +603,9 @@ onUnmounted(() => clearInterval(clockTimer))
           <p v-else-if="records.length" class="mt-4 text-sm text-slate-700" role="status" aria-live="polite">{{ emptyMessage }}</p>
           <div v-if="!listLoading && !listError && !records.length" class="empty-state mt-6">
             <Search class="h-6 w-6" aria-hidden="true" />
-            <p class="mt-3 font-semibold">{{ keyword.trim() ? 'Tidak ada surat ditemukan' : 'Temukan surat yang Anda perlukan' }}</p>
-            <p class="mt-1 max-w-prose text-sm text-slate-700">{{ keyword.trim() ? 'Coba kata kunci lain atau hapus filter posisi.' : 'Cari berdasarkan agenda, nomor surat, asal, atau perihal.' }}</p>
-            <Button v-if="keyword.trim()" variant="outline" class="mt-4" @click="resetSearch">Reset filter</Button>
+            <p class="mt-3 font-semibold">Tidak ada surat ditemukan</p>
+            <p class="mt-1 max-w-prose text-sm text-slate-700">Ubah kata kunci atau filter, lalu coba kembali.</p>
+            <Button v-if="keyword || selectedPosition !== null" variant="outline" class="mt-4" @click="resetSearch">Reset filter</Button>
           </div>
 
           <div v-if="records.length" class="letter-list mt-3">
@@ -616,10 +619,16 @@ onUnmounted(() => clearInterval(clockTimer))
             </article>
           </div>
 
-          <nav v-if="total > 0" class="list-pagination mt-5 flex items-center justify-between gap-3" aria-label="Paginasi daftar surat">
-            <Button variant="outline" :disabled="page <= 1 || listLoading" @click="page--; search(false)"><ChevronLeft class="h-4 w-4" aria-hidden="true" /> Sebelumnya</Button>
-            <span class="text-sm text-slate-700">Halaman {{ page }} dari {{ pageCount }}</span>
-            <Button variant="outline" :disabled="page >= pageCount || listLoading" @click="page++; search(false)">Berikutnya <ChevronRight class="h-4 w-4" aria-hidden="true" /></Button>
+          <nav v-if="total > 0" class="list-pagination mt-6" aria-label="Paginasi daftar surat">
+            <p class="pagination-summary" role="status">Menampilkan {{ (page - 1) * pageSize + 1 }}-{{ Math.min(page * pageSize, total) }} dari {{ total }} surat</p>
+            <div class="pagination-controls">
+              <label class="page-size-control">Baris per halaman<select :value="pageSize" aria-label="Jumlah baris per halaman" @change="changePageSize"><option :value="10">10</option><option :value="50">50</option><option :value="100">100</option></select></label>
+              <div class="page-buttons">
+                <Button variant="outline" class="page-step" :disabled="page <= 1 || listLoading" aria-label="Halaman sebelumnya" @click="page--; search(false)"><ChevronLeft class="h-4 w-4" aria-hidden="true" /></Button>
+                <Button v-for="pageNumber in pageNumbers" :key="pageNumber" variant="ghost" class="page-number" :class="{ 'is-active': page === pageNumber }" :aria-current="page === pageNumber ? 'page' : undefined" :disabled="listLoading" @click="page = pageNumber; search(false)">{{ pageNumber }}</Button>
+                <Button variant="outline" class="page-step" :disabled="page >= pageCount || listLoading" aria-label="Halaman berikutnya" @click="page++; search(false)"><ChevronRight class="h-4 w-4" aria-hidden="true" /></Button>
+              </div>
+            </div>
           </nav>
         </section>
 

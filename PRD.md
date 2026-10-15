@@ -47,7 +47,7 @@ Tab `Users` yang ada pada workbook tidak digunakan sebagai login username/passwo
 | Fitur | Perilaku yang diperlukan |
 | --- | --- |
 | Dashboard sederhana | Jumlah pencatatan, surat diterima bulan berjalan, distribusi posisi surat dan pencatatan yang memiliki keterangan tindak lanjut |
-| Daftar surat masuk | Menampilkan data yang sudah ada, dengan pencarian, filter, urutan tampilan dan paginasi |
+| Daftar surat masuk | Menampilkan seluruh data sejak pertama dibuka, dengan pencarian, filter, urutan tampilan dan paginasi 10/50/100 baris (default 10) |
 | Pencatatan baru | Formulir yang menyimpan data ke 14 kolom yang sama |
 | Detail surat | Menampilkan identitas, disposisi, posisi, keterangan tindak lanjut dan tautan berkas |
 | Edit pencatatan | Memperbarui hanya kolom yang diubah pengguna; field lain tetap dipertahankan |

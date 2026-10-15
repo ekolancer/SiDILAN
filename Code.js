@@ -110,9 +110,9 @@ function getSuratMasuk(query) {
   try {
     const { config } = requireRole_('READ');
     if (!query || typeof query !== 'object' || Array.isArray(query)) throw new Error('VALIDATION_ERROR');
-    const keyword = typeof query.keyword === 'string' ? query.keyword.trim() : '';
-    if (!keyword) throw new Error('KEYWORD_REQUIRED');
-    if (keyword.length > 200) throw new Error('VALIDATION_ERROR');
+    const rawKeyword = query.keyword === undefined ? '' : query.keyword;
+    if (typeof rawKeyword !== 'string' || rawKeyword.length > 200) throw new Error('VALIDATION_ERROR');
+    const keyword = rawKeyword.trim();
 
     const selectedPositions = query && query.positions;
     if (selectedPositions !== undefined && (!Array.isArray(selectedPositions) || selectedPositions.length > 100 || selectedPositions.some(value => typeof value !== 'string'))) {
@@ -120,12 +120,13 @@ function getSuratMasuk(query) {
     }
     const pageValue = query.page === undefined ? 1 : Number(query.page);
     if (!Number.isFinite(pageValue) || pageValue < 1 || !Number.isInteger(pageValue)) throw new Error('VALIDATION_ERROR');
+    const pageSize = query.pageSize === undefined ? 10 : Number(query.pageSize);
+    if (![10, 50, 100].includes(pageSize)) throw new Error('VALIDATION_ERROR');
 
     const register = readRegister_(config);
     const selected = selectedPositions === undefined ? null : new Set(selectedPositions);
     const normalizedKeyword = keyword.toLocaleLowerCase();
     const matches = register.records.filter(record => matchesRegisterFilter_(record, normalizedKeyword, selected));
-    const pageSize = 50;
     const pageCount = Math.max(1, Math.ceil(matches.length / pageSize));
     const page = Math.min(pageValue, pageCount);
     return {

@@ -68,9 +68,9 @@ Grafik tidak menambah tahap proses, SLA, tenggat, surat keluar ke register masuk
 
 ## 5. Daftar surat masuk
 
-Pencarian: agenda, nomor surat, asal, perihal dan tujuan disposisi. Placeholder **Cari agenda, nomor surat, asal, atau perihal**.
+Saat menu dibuka, tampilkan seluruh register sejak awal dengan 10 baris per halaman. Kontrol halaman menyediakan nomor halaman langsung, Sebelumnya/Berikutnya, serta pilihan 10/50/100 baris. Pencarian: agenda, nomor surat, asal, perihal dan tujuan disposisi. Placeholder **Cari agenda, nomor surat, asal, atau perihal**.
 
-Filter utama: periode diterima dan posisi surat. Filter tambahan: memiliki disposisi, memiliki keterangan tindak lanjut, atau memiliki tautan berkas. Filter tidak memerlukan master unit/PIC.
+Filter utama: posisi surat. Filter tambahan: memiliki disposisi, memiliki keterangan tindak lanjut, atau memiliki tautan berkas. Filter tidak memerlukan master unit/PIC.
 
 | Kolom default | Perilaku |
 | --- | --- |
@@ -83,9 +83,9 @@ Filter utama: periode diterima dan posisi surat. Filter tambahan: memiliki dispo
 | Posisi surat | Badge teks asli atau Belum diisi |
 | Aksi | Lihat; Edit bagi pencatat |
 
-Paginasi 25/50/100 baris. Sorting hanya memengaruhi tampilan. Filter tetap dipertahankan setelah pengguna kembali dari detail.
+Sorting hanya memengaruhi tampilan. Filter tetap dipertahankan setelah pengguna kembali dari detail.
 
-Pada mobile, kartu menampilkan agenda, perihal, asal, tanggal dan posisi. Detail menjadi tempat melihat semua field. Baris template tidak tampil; baris surat sebagian tetap tampil dengan field kosong yang jelas.
+Pada mobile, kartu menampilkan agenda, perihal, asal, tanggal dan posisi. Paginasi menata ulang kontrol menjadi susunan ringkas tanpa luapan horizontal. Detail menjadi tempat melihat semua field. Baris template tidak tampil; baris surat sebagian tetap tampil dengan field kosong yang jelas.
 
 ## 6. Form tambah dan edit
 

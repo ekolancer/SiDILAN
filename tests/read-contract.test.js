@@ -21,6 +21,8 @@ context.PropertiesService = { getScriptProperties: () => ({ getProperties: () =>
 context.Session = { getActiveUser: () => ({ getEmail: () => 'reader@example.com' }) };
 const result = context.getSuratMasuk({ keyword: 'test' });
 assert.deepEqual(JSON.parse(JSON.stringify(result)), { success: false, error: 'SHEET_UNAVAILABLE', message: 'Spreadsheet tidak dapat dibaca oleh akun ini.' });
+assert.deepEqual(JSON.parse(JSON.stringify(context.getSuratMasuk({}))), { success: false, error: 'SHEET_UNAVAILABLE', message: 'Spreadsheet tidak dapat dibaca oleh akun ini.' });
+assert.equal(context.getSuratMasuk({ keyword: 'x', pageSize: 20 }).error, 'VALIDATION_ERROR');
 
 const validCreate = {
   receivedDate: '2026-10-14', letterNumber: '001/ABC', sender: 'Unit Uji', subject: 'Surat uji',
