@@ -1,6 +1,6 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
-import { CalendarDays, ChevronLeft, ChevronRight, ClipboardList, ExternalLink, FileChartColumn, FileText, Inbox, LayoutDashboard, RotateCw, Search, UserRound, X } from '@lucide/vue'
+import { CalendarDays, ChevronLeft, ChevronRight, CircleHelp, ClipboardList, ExternalLink, FileChartColumn, FileText, Inbox, LayoutDashboard, RotateCw, Search, Settings, UserRound, X } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -50,6 +50,7 @@ const duplicateCandidates = ref([])
 const createForm = ref(emptyCreateForm())
 const activeView = ref('dashboard')
 const jakartaClock = ref('')
+const globalSearchInput = ref(null)
 let clockTimer = null
 const dashboard = ref(null)
 const dashboardLoading = ref(false)
@@ -94,6 +95,7 @@ const reportColumns = [
   ['letterFileReference', 'Link berkas'], ['letterPosition', 'Posisi surat'],
   ['followupNote', 'Keterangan tindak lanjut'], ['followupReference', 'Link berkas tindak lanjut'],
 ]
+const reportListColumns = reportColumns.slice(0, 9).filter(([key]) => key !== 'documentDescription')
 const reportQuery = computed(() => ({
   keyword: reportKeyword.value.trim(), positions: [...reportPositions.value],
   sender: reportSender.value, dispositionTarget: reportTarget.value,
@@ -444,30 +446,53 @@ function updateJakartaClock() {
   }).format(new Date())
 }
 
+function handleGlobalShortcut(event) {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+    event.preventDefault()
+    globalSearchInput.value?.$el?.focus()
+  }
+}
+
+function openSearchResults() {
+  switchView('list')
+  nextTick(() => search())
+}
+
 onMounted(() => {
   updateJakartaClock()
   clockTimer = setInterval(updateJakartaClock, 1000)
+  window.addEventListener('keydown', handleGlobalShortcut)
   loadInitial()
 })
-onUnmounted(() => clearInterval(clockTimer))
+onUnmounted(() => {
+  clearInterval(clockTimer)
+  window.removeEventListener('keydown', handleGlobalShortcut)
+})
 </script>
 
 <template>
   <div class="app-shell min-h-dvh">
     <a class="skip-link" href="#main-content">Lewati ke konten utama</a>
     <aside class="app-sidebar print:hidden" aria-label="Menu SiDILAN">
-      <p class="app-wordmark">SiDILAN</p>
+      <div class="sidebar-brand"><span class="brand-mark" aria-hidden="true">S</span><p class="app-wordmark">SiDILAN</p></div>
+      <p class="nav-heading">Ruang kerja</p>
       <nav v-if="!loadingStatus && !statusError" class="app-nav" aria-label="Navigasi utama">
         <Button v-for="view in [['dashboard', 'Dashboard', LayoutDashboard], ['list', 'Daftar Surat Masuk', Inbox], ['report', 'Rekap Surat Masuk', FileChartColumn]]" :key="view[0]" variant="ghost" class="app-nav-link" :class="{ 'is-current': activeView === view[0] }" :aria-current="activeView === view[0] ? 'page' : undefined" @click="switchView(view[0])"><component :is="view[2]" aria-hidden="true" />{{ view[1] }}</Button>
       </nav>
-      <p class="sidebar-caption">Sistem Digital Monitoring<br>Tindak Lanjut Surat</p>
+      <div class="sidebar-utilities print:hidden" aria-label="Menu tambahan">
+        <p class="sidebar-caption">Sistem Digital Monitoring<br>Tindak Lanjut Surat</p>
+        <Button variant="ghost" class="sidebar-utility" disabled aria-disabled="true" aria-label="Pengaturan, belum tersedia" title="Pengaturan belum tersedia"><Settings aria-hidden="true" /><span>Pengaturan</span></Button>
+        <Button variant="ghost" class="sidebar-utility" disabled aria-disabled="true" aria-label="Bantuan, belum tersedia" title="Bantuan belum tersedia"><CircleHelp aria-hidden="true" /><span>Bantuan</span></Button>
+      </div>
     </aside>
-    <header class="app-header app-welcome-header print:hidden">
+    <header class="app-header app-topbar print:hidden">
       <div class="app-header-inner">
-        <div class="app-welcome">
-          <p>Selamat datang, <span v-if="role"> {{ role === 'WRITE' ? 'Administrator' : 'Viewer' }}</span><span v-if="email" class="welcome-email"> ( {{ email }} )</span></p>
-          <blockquote>“Setiap surat tercatat dengan baik, setiap tindak lanjut lebih terarah.”</blockquote>
-        </div>
+        <form v-if="!loadingStatus && !statusError" class="global-search" role="search" @submit.prevent="openSearchResults">
+          <Search class="global-search-icon" aria-hidden="true" />
+          <Input ref="globalSearchInput" v-model="keyword" maxlength="200" placeholder="Cari nomor surat, perihal, atau unit..." aria-label="Cari surat masuk" autocomplete="off" />
+          <kbd class="search-shortcut" aria-hidden="true">Ctrl K</kbd>
+          <Button type="submit" variant="ghost" class="global-search-submit" aria-label="Cari surat"><Search aria-hidden="true" /></Button>
+        </form>
         <div class="app-header-tools">
           <time class="jakarta-clock" :datetime="new Date().toISOString()" aria-label="Waktu saat ini di WIB"><strong>{{ jakartaClock }}</strong><span class="clock-zone">WIB</span></time>
           <div v-if="role" class="app-account" :aria-label="`${role === 'WRITE' ? 'Administrator' : 'Viewer'}${email ? `, ${email}` : ''}`">
@@ -491,10 +516,13 @@ onUnmounted(() => clearInterval(clockTimer))
 
       <template v-else>
         <section v-if="activeView === 'dashboard'" class="dashboard-view page-dashboard" aria-labelledby="dashboard-title">
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <h1 id="dashboard-title" class="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <div class="dashboard-heading flex flex-wrap items-center justify-between gap-3">
+            <div><h1 id="dashboard-title" class="text-2xl font-semibold tracking-tight">Dashboard</h1><p class="dashboard-intro">Ringkasan surat masuk dan tindak lanjut dalam satu tampilan.</p></div>
             <Button variant="outline" :disabled="dashboardLoading" @click="loadDashboard"><RotateCw class="h-4 w-4" aria-hidden="true" /> Muat ulang</Button>
           </div>
+          <section class="dashboard-welcome" aria-label="Sapaan">
+            <div><p>Selamat datang<span v-if="role">, {{ role === 'WRITE' ? 'Administrator' : 'Viewer' }}</span><span v-if="email" class="welcome-email"> ({{ email }})</span></p><blockquote>“Setiap surat tercatat dengan baik, setiap tindak lanjut lebih terarah.”</blockquote></div>
+          </section>
           <p v-if="dashboardError" class="mt-4 text-sm text-red-800" role="alert">{{ dashboardError }}</p>
           <div v-if="dashboardLoading" class="mt-6" role="status" aria-label="Memuat ringkasan surat"><p class="text-sm text-slate-700">Memuat ringkasan...</p><div class="skeleton-lines mt-4" aria-hidden="true"><span></span><span></span><span></span></div></div>
           <template v-if="dashboard">
@@ -554,16 +582,15 @@ onUnmounted(() => clearInterval(clockTimer))
 
         <section v-if="activeView === 'report'" class="workspace-panel report-section page-report rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6" aria-labelledby="report-title">
           <div class="report-controls">
-            <h1 id="report-title" class="text-2xl font-semibold tracking-tight">Rekap surat masuk</h1>
-            <p class="mt-1 text-sm text-slate-700">Pratinjau seluruh 14 kolom. Filter periode memakai tanggal diterima.</p>
+            <h1 id="report-title" class="text-2xl font-semibold tracking-tight">Rekap Surat Masuk</h1>
             <form class="report-filter-form mt-5 grid gap-4" @submit.prevent="loadReport">
               <label class="grid gap-1 text-sm font-medium">Kata kunci (opsional)<Input v-model="reportKeyword" maxlength="200" placeholder="Agenda, nomor surat, asal, atau perihal" /></label>
               <div class="report-filter-row">
                 <label class="grid gap-1 text-sm font-medium">Dari tanggal<Input v-model="fromDate" type="date" :max="toDate || undefined" /></label>
                 <label class="grid gap-1 text-sm font-medium">Sampai tanggal<Input v-model="toDate" type="date" :min="fromDate || undefined" /></label>
-                <label class="grid gap-1 text-sm font-medium">Posisi surat<MultiSelect v-model="reportPositions" :options="positionOptions" aria-label="Filter posisi rekap" placeholder="Pilih posisi" /></label>
-                <label class="grid gap-1 text-sm font-medium">Asal Surat<Select v-model="reportSender"><SelectTrigger class="w-full"><SelectValue placeholder="Semua asal surat" /></SelectTrigger><SelectContent><SelectItem v-for="sender in reportSenders" :key="sender" :value="sender">{{ sender }}</SelectItem></SelectContent></Select></label>
-                <label class="grid gap-1 text-sm font-medium">Tujuan Dispo<Select v-model="reportTarget"><SelectTrigger class="w-full"><SelectValue placeholder="Semua tujuan dispo" /></SelectTrigger><SelectContent><SelectItem v-for="target in reportTargets" :key="target" :value="target">{{ target }}</SelectItem></SelectContent></Select></label>
+                <label class="grid gap-1 text-sm font-medium">Posisi surat<MultiSelect v-model="reportPositions" :options="positionOptions" aria-label="Filter posisi rekap" placeholder="Pilih salah satu" /></label>
+                <label class="grid gap-1 text-sm font-medium">Asal Surat<Select v-model="reportSender"><SelectTrigger class="w-full"><SelectValue placeholder="Pilih salah satu" /></SelectTrigger><SelectContent><SelectItem v-for="sender in reportSenders" :key="sender" :value="sender">{{ sender }}</SelectItem></SelectContent></Select></label>
+                <label class="grid gap-1 text-sm font-medium">Tujuan Dispo<Select v-model="reportTarget"><SelectTrigger class="w-full"><SelectValue placeholder="Pilih salah satu" /></SelectTrigger><SelectContent><SelectItem v-for="target in reportTargets" :key="target" :value="target">{{ target }}</SelectItem></SelectContent></Select></label>
                 <Button type="button" variant="outline" class="report-reset" @click="resetReportFilters">Reset filter</Button>
               </div>
               <div class="flex flex-wrap items-center gap-3"><Button type="submit" :disabled="reportLoading">{{ reportLoading ? 'Memuat...' : 'Tampilkan rekap' }}</Button><p class="text-sm text-slate-700">Kata kunci boleh kosong untuk semua surat pada posisi terpilih.</p></div>
@@ -581,15 +608,15 @@ onUnmounted(() => clearInterval(clockTimer))
           </div>
           <template v-if="report && reportIsCurrent">
             <div class="report-print-heading">
-              <h2>Rekap surat masuk</h2>
+              <h2>Rekap Surat Masuk</h2>
               <p>Dibuat {{ report.generatedAt || '—' }} WIB · {{ report.total }} surat</p>
               <p>Filter: {{ report.filters?.keyword || 'Semua kata kunci' }} · {{ report.filters?.fromDate || 'Awal' }} sampai {{ report.filters?.toDate || 'Akhir' }} · Posisi: {{ report.filters?.positions?.map(formatPosition).join(', ') || 'Tidak ada' }} · Asal: {{ report.filters?.sender || 'Semua' }} · Tujuan: {{ report.filters?.dispositionTarget || 'Semua' }}</p>
             </div>
             <p class="mt-5 text-sm text-slate-700" role="status">{{ report.total }} surat dalam rekap. <span v-if="report.unreadableDates">{{ report.unreadableDates }} tanggal tak terbaca tidak masuk periode.</span><span v-if="report.warningCount"> {{ report.warningCount }} baris dilewati karena data tidak dapat dibaca.</span></p>
-            <div v-if="report.records.length" class="report-scroll report-screen-table mt-4" tabindex="0" role="region" aria-label="Pratinjau rekap 14 kolom, geser untuk melihat semua kolom">
+            <div v-if="report.records.length" class="report-scroll report-screen-table mt-4" tabindex="0" role="region" aria-label="Pratinjau rekap 8 kolom, geser untuk melihat semua kolom">
               <table class="report-table">
-                <thead><tr><th v-for="[key, label] in reportColumns" :key="key" scope="col">{{ label }}</th></tr></thead>
-                <tbody><tr v-for="record in reportRows" :key="`${record.rowHint}-${record.agenda}`"><td v-for="[key] in reportColumns" :key="key">{{ display(record[key]) }}</td></tr></tbody>
+                <thead><tr><th v-for="[key, label] in reportListColumns" :key="key" scope="col">{{ label }}</th></tr></thead>
+                <tbody><tr v-for="record in reportRows" :key="`${record.rowHint}-${record.agenda}`"><td v-for="[key] in reportListColumns" :key="key">{{ display(record[key]) }}</td></tr></tbody>
               </table>
             </div>
             <nav v-if="report.records.length > reportPageSize" class="report-pagination mt-4 flex flex-wrap items-center justify-between gap-3 print:hidden" aria-label="Paginasi rekap surat">
@@ -599,8 +626,8 @@ onUnmounted(() => clearInterval(clockTimer))
             </nav>
             <div v-if="report.records.length" class="report-scroll report-print-table" aria-hidden="true">
               <table class="report-table">
-                <thead><tr><th v-for="[key, label] in reportColumns" :key="key" scope="col">{{ label }}</th></tr></thead>
-                <tbody><tr v-for="record in report.records" :key="`${record.rowHint}-${record.agenda}`"><td v-for="[key] in reportColumns" :key="key">{{ display(record[key]) }}</td></tr></tbody>
+                <thead><tr><th v-for="[key, label] in reportListColumns" :key="key" scope="col">{{ label }}</th></tr></thead>
+                <tbody><tr v-for="record in report.records" :key="`${record.rowHint}-${record.agenda}`"><td v-for="[key] in reportListColumns" :key="key">{{ display(record[key]) }}</td></tr></tbody>
               </table>
             </div>
             <div v-if="!report.records.length" class="empty-state mt-5"><p class="font-semibold">Rekap kosong</p><p class="mt-1 text-sm text-slate-700">Ubah periode atau posisi surat, lalu tampilkan rekap lagi.</p></div>
@@ -609,7 +636,7 @@ onUnmounted(() => clearInterval(clockTimer))
 
         <section v-if="activeView === 'list'" class="workspace-panel page-list rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
           <div class="flex flex-wrap items-center justify-between gap-3">
-            <h1 class="text-2xl font-semibold tracking-tight">Daftar surat masuk</h1>
+            <h1 class="text-2xl font-semibold tracking-tight">Daftar Surat Masuk</h1>
             <Button v-if="role === 'WRITE'" @click="openCreate">Tambah surat</Button>
           </div>
           <form class="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]" role="search" @submit.prevent="search()">
@@ -619,9 +646,9 @@ onUnmounted(() => clearInterval(clockTimer))
           </form>
 
           <div class="list-filter-row mt-4">
-            <label class="grid gap-1 text-sm font-medium">Posisi Surat<MultiSelect v-model="selectedPositions" :options="positionOptions" aria-label="Filter posisi surat" placeholder="Semua posisi" /></label>
-            <label class="grid gap-1 text-sm font-medium">Asal Surat<Select v-model="selectedSender"><SelectTrigger class="w-full"><SelectValue placeholder="Semua asal surat" /></SelectTrigger><SelectContent><SelectItem v-for="sender in allSenders" :key="sender" :value="sender">{{ sender }}</SelectItem></SelectContent></Select></label>
-            <label class="grid gap-1 text-sm font-medium">Tujuan Dispo<MultiSelect v-model="selectedTargets" :options="targetOptions" aria-label="Filter tujuan disposisi" placeholder="Semua tujuan" /></label>
+            <label class="grid gap-1 text-sm font-medium">Posisi Surat<MultiSelect v-model="selectedPositions" :options="positionOptions" aria-label="Filter posisi surat" placeholder="Pilih salah satu" /></label>
+            <label class="grid gap-1 text-sm font-medium">Asal Surat<Select v-model="selectedSender"><SelectTrigger class="w-full"><SelectValue placeholder="Pilih salah satu" /></SelectTrigger><SelectContent><SelectItem v-for="sender in allSenders" :key="sender" :value="sender">{{ sender }}</SelectItem></SelectContent></Select></label>
+            <label class="grid gap-1 text-sm font-medium">Tujuan Dispo<MultiSelect v-model="selectedTargets" :options="targetOptions" aria-label="Filter tujuan disposisi" placeholder="Pilih salah satu" /></label>
             <div class="list-filter-actions"><Button variant="outline" @click="resetSearch">Reset filter</Button><Button variant="outline" :disabled="listLoading" @click="search(false)"><RotateCw class="h-4 w-4" aria-hidden="true" /> Muat ulang</Button></div>
           </div>
 
@@ -670,12 +697,12 @@ onUnmounted(() => clearInterval(clockTimer))
             <label class="grid gap-1 text-sm font-medium">Tanggal surat<Input v-model="createForm.letterDate" type="date" /></label>
             <label class="grid gap-1 text-sm font-medium">Asal surat *<Input v-model="createForm.sender" maxlength="500" required /></label>
             <label class="grid gap-1 text-sm font-medium sm:col-span-2">Perihal *<Input v-model="createForm.subject" maxlength="500" required /></label>
-            <label class="grid gap-1 text-sm font-medium sm:col-span-2">Isi disposisi<Textarea v-model="createForm.disposition" maxlength="5000" rows="3" class="rounded-md border border-slate-300 px-3 py-2 focus-visible:ring-2 focus-visible:ring-blue-700" /></label>
-            <label class="grid gap-1 text-sm font-medium">Tujuan disposisi<Textarea v-model="createForm.dispositionTargets" maxlength="5000" rows="3" class="rounded-md border border-slate-300 px-3 py-2 focus-visible:ring-2 focus-visible:ring-blue-700" /></label>
+            <label class="grid gap-1 text-sm font-medium sm:col-span-2">Isi disposisi<Textarea v-model="createForm.disposition" maxlength="5000" rows="3" class="rounded-md border border-border px-3 py-2 focus-visible:ring-2 focus-visible:ring-primary" /></label>
+            <label class="grid gap-1 text-sm font-medium">Tujuan disposisi<Textarea v-model="createForm.dispositionTargets" maxlength="5000" rows="3" class="rounded-md border border-border px-3 py-2 focus-visible:ring-2 focus-visible:ring-primary" /></label>
             <label class="grid gap-1 text-sm font-medium">Keterangan / tanggal paraf<Input v-model="createForm.parafDateOrNote" maxlength="5000" /></label>
             <label class="grid gap-1 text-sm font-medium">Tautan berkas surat<Input v-model="createForm.letterFileReference" type="url" maxlength="2000" placeholder="https://..." /></label>
             <div class="grid gap-1 text-sm font-medium"><label for="create-position">Posisi surat</label><div class="flex items-center gap-2"><Select v-model="createForm.letterPosition"><SelectTrigger id="create-position" class="min-h-11 flex-1"><SelectValue placeholder="Belum diisi" /></SelectTrigger><SelectContent><SelectItem v-for="option in allPositions.filter(value => value)" :key="option" :value="option">{{ option }}</SelectItem></SelectContent></Select><Button type="button" variant="ghost" size="sm" :disabled="!createForm.letterPosition" @click="createForm.letterPosition = ''">Kosongkan</Button></div></div>
-            <label class="grid gap-1 text-sm font-medium sm:col-span-2">Keterangan tindak lanjut<Textarea v-model="createForm.followupNote" maxlength="5000" rows="3" class="rounded-md border border-slate-300 px-3 py-2 focus-visible:ring-2 focus-visible:ring-blue-700" /></label>
+            <label class="grid gap-1 text-sm font-medium sm:col-span-2">Keterangan tindak lanjut<Textarea v-model="createForm.followupNote" maxlength="5000" rows="3" class="rounded-md border border-border px-3 py-2 focus-visible:ring-2 focus-visible:ring-primary" /></label>
             <label class="grid gap-1 text-sm font-medium sm:col-span-2">Berkas / catatan tindak lanjut<Input v-model="createForm.followupReference" maxlength="5000" placeholder="URL HTTPS atau catatan" /></label>
             <p v-if="createError" class="text-sm text-red-800 sm:col-span-2" role="alert">{{ createError }}</p>
             <div v-if="duplicateCandidates.length" class="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm sm:col-span-2">
@@ -703,7 +730,7 @@ onUnmounted(() => clearInterval(clockTimer))
           <form v-if="editingDetail && !detailLoading" class="mt-5 grid gap-4 sm:grid-cols-2" @submit.prevent="submitEdit">
             <div v-for="[key, label] in (editMode === 'quick' ? fields.filter(([key]) => ['disposition', 'dispositionTargets', 'parafDateOrNote', 'letterPosition', 'followupNote'].includes(key)) : fields.filter(([key]) => key !== 'documentDescription').concat([['letterFileReference', 'Tautan berkas surat'], ['followupReference', 'Berkas / catatan tindak lanjut']]))" :key="key" class="grid min-w-0 gap-1 text-sm font-semibold text-slate-800">
               <label :for="`edit-${key}`">{{ label }}</label>
-              <Textarea v-if="['disposition', 'dispositionTargets', 'followupNote'].includes(key)" :id="`edit-${key}`" v-model="editForm[key]" maxlength="5000" rows="3" class="rounded-md border border-slate-300 px-3 py-2 font-normal focus-visible:ring-2 focus-visible:ring-blue-700" />
+              <Textarea v-if="['disposition', 'dispositionTargets', 'followupNote'].includes(key)" :id="`edit-${key}`" v-model="editForm[key]" maxlength="5000" rows="3" class="rounded-md border border-border px-3 py-2 font-normal focus-visible:ring-2 focus-visible:ring-primary" />
               <Input v-else-if="key === 'receivedDate' || key === 'letterDate'" :id="`edit-${key}`" v-model="editForm[key]" type="date" :required="key === 'receivedDate'" />
               <div v-else-if="key === 'letterPosition'" class="flex items-center gap-2 font-normal"><Select v-model="editForm[key]"><SelectTrigger :id="`edit-${key}`" class="min-h-11 flex-1"><SelectValue placeholder="Belum diisi" /></SelectTrigger><SelectContent><SelectItem v-if="editForm[key] && !allPositions.includes(editForm[key])" :value="editForm[key]">{{ editForm[key] }} (nilai saat ini)</SelectItem><SelectItem v-for="option in allPositions.filter(value => value)" :key="option" :value="option">{{ option }}</SelectItem></SelectContent></Select><Button type="button" variant="ghost" size="sm" :disabled="!editForm[key]" @click="editForm[key] = ''">Kosongkan</Button></div>
               <Input v-else :id="`edit-${key}`" v-model="editForm[key]" :maxlength="key === 'letterNumber' || key === 'sender' || key === 'subject' ? 500 : 5000" :type="key === 'letterFileReference' ? 'url' : 'text'" />
@@ -724,7 +751,7 @@ onUnmounted(() => clearInterval(clockTimer))
               <dt class="text-sm font-semibold text-slate-800">{{ label }}</dt>
               <dd class="mt-1 text-sm">
                 <template v-if="detail.links?.[key]?.length">
-                  <a v-for="link in detail.links[key]" :key="link.url" :href="link.url" target="_blank" rel="noopener noreferrer" class="mr-3 inline-flex items-center gap-1 text-blue-800 underline underline-offset-2">{{ link.label || link.url }} <ExternalLink class="h-3.5 w-3.5" aria-hidden="true" /></a>
+                  <a v-for="link in detail.links[key]" :key="link.url" :href="link.url" target="_blank" rel="noopener noreferrer" class="mr-3 inline-flex items-center gap-1 text-primary underline underline-offset-2">{{ link.label || link.url }} <ExternalLink class="h-3.5 w-3.5" aria-hidden="true" /></a>
                 </template>
                 <span v-else>{{ display(detail[key]) }}</span>
               </dd>

@@ -9,7 +9,7 @@
 
 Pengguna cukup menemukan surat, mengisi atau memperbarui pencatatan, lalu menyimpan. Bahasa dan field mengikuti 14 kolom register. Aplikasi tidak menampilkan tahapan wajib, persetujuan, penugasan PIC atau indikator selesai yang tidak ada dalam data sumber.
 
-Tampilan formal, bersih dan mudah dibaca, dengan identitas biru tua–oranye SiDILAN. Konten kerja lebih dominan daripada banner/foto gedung.
+Tampilan formal, bersih dan mudah dibaca, dengan bingkai terang dan aksen ungu lembut. Komposisi ringkas seperti meja register: navigasi sebagai indeks, kartu metrik sebagai ikhtisar, grafik dan tabel sebagai lembar kerja. Konten kerja lebih dominan daripada banner/foto gedung; foto dan data ilustrasi tidak digunakan.
 
 ## 2. Navigasi
 
@@ -27,21 +27,21 @@ Menu Disposisi, Penugasan, Tugas Saya, Review, Arsip, Surat Keluar dan WhatsApp 
 
 | Elemen | Arahan |
 | --- | --- |
-| Navigasi | Sidebar navy 224 px dengan tiga menu dan ikon; menu aktif berwarna biru. Pada mobile menjadi navigasi horizontal |
-| Header | Header putih berisi sapaan, peran dan identitas akun; tombol Muat ulang pada tampilan terkait |
-| Latar halaman | Biru-abu muda `#F2F6FA`; panel putih berbatas biru lembut. Area filter dan tabel memakai tint biru pucat untuk membantu pemindaian |
-| Peran warna | Navy untuk hierarki/teks, biru untuk aksi dan data masuk, oranye untuk penekanan brand, hijau untuk status selesai/keluar, amber untuk proses/peringatan, merah untuk lewat batas waktu/error |
-| Warna merek | Navy `#0B2745`, biru `#1263A0`, oranye `#F47A14` |
-| Teks | Utama `#172B4D`, sekunder `#52647A` |
-| Tipografi | Outfit lokal dengan fallback sistem; body 14–16 px; judul responsif 25–32 px |
-| Input/tombol | Tinggi 40–44 px; label jelas; radius 8 px |
-| Panel | Radius 12 px; jarak 16–24 px; dekorasi terbatas |
+| Navigasi | Sidebar putih 216 px dengan tiga menu utama; menu aktif memakai tint lavender. Pengaturan dan Bantuan yang belum tersedia tetap nonaktif. Pada layar sempit menu menjadi baris horizontal yang dapat digeser |
+| Header | Topbar putih dengan pencarian surat (Ctrl/⌘+K), jam WIB, dan avatar akun. Sapaan berada dalam bidang ambient lembut di bawah judul dashboard |
+| Latar halaman | Kanvas dingin `#F7F8FB` dengan sorotan ambient sian/lavender di luar lembar kerja putih. Panel putih memakai garis halus; filter memakai abu sejuk |
+| Peran warna | Ungu untuk aksi utama dan seri data masuk, sian untuk data keluar dan sorotan nonsemantik. Hijau/amber/merah tetap menyatakan status selesai/proses/terlambat atau error; jangan mengubah arti warna status |
+| Warna merek | Ungu `#7152AD`, lavender pucat `#F1ECF9`, sian pucat `#E5F5F8` |
+| Teks | Utama `#24243B`, sekunder `#55576B` |
+| Tipografi | Outfit lokal dengan fallback sistem; body 14–16 px; judul responsif 25–32 px; angka tabular |
+| Input/tombol | Tinggi 40–44 px; label jelas; radius mengikuti hierarki komponen |
+| Panel | Radius sekitar 12 px; jarak 16–24 px; dekorasi terbatas |
 
-Tombol utama menggunakan biru dengan teks putih. Oranye dipakai sebagai aksen. Kontras teks/input/fokus diverifikasi pada implementasi; warna bukan satu-satunya pembeda.
+Tombol utama menggunakan ungu dengan teks putih. Kontras teks/input/fokus perlu dipertahankan; warna bukan satu-satunya pembeda.
 
 Komponen shadcn-vue yang disiapkan: Button, Input, Label, Textarea, Select (posisi tunggal), Card, Badge, Table, Dialog, Sheet, dan Sonner. Filter daftar surat menggunakan dropdown satu posisi (Semua posisi, Belum diisi, atau salah satu nilai live), dengan tombol Reset dan Muat ulang. Filter rekap tetap menggunakan native multi-select untuk beberapa posisi; Dialog, Sheet, dan Sonner tersedia untuk layar yang memerlukannya, bukan pengganti otomatis bagi panel atau pesan saat ini.
 
-Pada layar kecil, sidebar menjadi navigasi horizontal yang dapat digeser, form menjadi satu kolom dan daftar surat menjadi baris ringkas bertumpuk. Target lebar minimum 360 px; tombol dapat digunakan dengan sentuhan maupun keyboard. Tautan lewati ke konten tersedia untuk keyboard. Logo resmi dipakai bila tersedia.
+Pada layar kecil, sidebar menjadi navigasi horizontal yang dapat digeser, form menjadi satu kolom dan tabel register/rekap tetap dapat digeser secara horizontal. Target lebar minimum 360 px; tombol dapat digunakan dengan sentuhan maupun keyboard. Tautan lewati ke konten tersedia untuk keyboard. Logo resmi dipakai bila tersedia.
 
 ## 4. Dashboard
 
@@ -115,7 +115,7 @@ Hak akses berkas tetap mengikuti Google Drive. Jika akun tidak memiliki izin ber
 
 ## 8. Rekap
 
-Rekap kosong saat menu dibuka; data hanya dimuat setelah pengguna menekan **Tampilkan rekap**. Filter memakai komponen Select shadcn-vue untuk posisi (multi-pilih), Asal Surat dan Tujuan Dispo dalam satu baris pada desktop, dengan Reset filter di ujung kanan. Tujuan gabungan dipisah pada koma/titik koma menjadi opsi masing-masing. Preview register 14 kolom menampilkan 10 baris per halaman; Cetak dan CSV berisi seluruh hasil filter. Header cetak memuat nama aplikasi/unit, filter dan waktu pembuatan.
+Rekap kosong saat menu dibuka; data hanya dimuat setelah pengguna menekan **Tampilkan rekap**. Filter memakai komponen Select shadcn-vue untuk posisi (multi-pilih), Asal Surat dan Tujuan Dispo dalam satu baris pada desktop, dengan Reset filter di ujung kanan. Tujuan gabungan dipisah pada koma/titik koma menjadi opsi masing-masing. Preview menampilkan 8 kolom (No. Agenda, Tanggal diterima, No. Surat, Tanggal Surat, Asal, Perihal, Isi Disposisi, Tujuan Disposisi) dengan 10 baris per halaman. Cetak memakai kolom yang sama; CSV mempertahankan 14 kolom register. Keduanya berisi seluruh hasil filter. Header cetak memuat nama aplikasi/unit, filter dan waktu pembuatan.
 
 Cetak menggunakan layout landscape, header tabel berulang dan gaya hitam-putih yang tetap terbaca. Cetak dan CSV memakai seluruh hasil filter, bukan hanya halaman pratinjau aktif. Tautan berkas menjadi opsi ekspor, tidak disisipkan tanpa pilihan pengguna.
 

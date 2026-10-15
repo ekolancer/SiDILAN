@@ -135,7 +135,7 @@ Tidak ada pengajuan penutupan, buka kembali surat, tahapan wajib, atau antrean r
 
 Filter periode menggunakan tanggal diterima. Tanggal yang tidak dapat dipahami tidak ditebak dan disebutkan jumlahnya pada rekap periode. Total pencatatan tetap dapat dihitung tanpa tanggal. Jika variasi label posisi ingin digabung pada grafik, tampilkan aturan penggabungan dan biarkan nilai sumber tetap utuh.
 
-Rekap tidak memuat hasil sebelum pengguna menekan Tampilkan Rekap. Filter posisi/asal/tujuan dispo memakai Select shadcn-vue; asal dan tujuan berasal dari nilai register dan tujuan gabungan dipisah pada koma/titik koma. Reset filter berada di ujung baris filter. Pratinjau memakai 10 baris per halaman. Rekap cetak/CSV tetap memuat seluruh hasil filter dan mempertahankan arti 14 kolom. URL berkas hanya diekspor bila pengguna memilihnya; teks yang menyerupai formula diekspor secara aman.
+Rekap tidak memuat hasil sebelum pengguna menekan Tampilkan Rekap. Filter posisi/asal/tujuan dispo memakai Select shadcn-vue; asal dan tujuan berasal dari nilai register dan tujuan gabungan dipisah pada koma/titik koma. Reset filter berada di ujung baris filter. Pratinjau memakai 10 baris per halaman dan menampilkan No. Agenda, Tanggal diterima, No. Surat, Tanggal Surat, Asal, Perihal, Isi Disposisi, dan Tujuan Disposisi. Cetak memakai kolom yang sama; CSV memuat seluruh 14 kolom register. Cetak dan CSV berisi seluruh hasil filter. URL berkas hanya diekspor bila pengguna memilihnya; teks yang menyerupai formula diekspor secara aman. URL berkas hanya diekspor bila pengguna memilihnya; teks yang menyerupai formula diekspor secara aman.
 
 ## 10. Kriteria penerimaan
 
