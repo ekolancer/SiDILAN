@@ -90,6 +90,17 @@ assert.deepEqual(own(context.getIncomingReport({ keyword: '', dispositionTarget:
 assert.equal(own(context.getIncomingReport({ keyword: '', sender: '', dispositionTarget: '' })).total, 3);
 assert.equal(own(context.getIncomingReport({ keyword: '', positions: [] })).total, 0);
 assert.equal(own(context.getIncomingReport({ keyword: '', sender: 7 })).error, 'VALIDATION_ERROR');
+context.collectPositions_ = () => [''];
+const senderOnlyList = own(context.getSuratMasuk({ sender: 'Lain' }));
+assert.equal(senderOnlyList.total, 1);
+assert.deepEqual(senderOnlyList.senders, ['Lain', 'Unit']);
+assert.deepEqual(senderOnlyList.targets, ['Bidang Logistik', 'Subbag TU']);
+const filteredList = own(context.getSuratMasuk({ positions: ['Baru Masuk'], dispositionTargets: ['Bidang Logistik'], pageSize: 10 }));
+assert.equal(filteredList.total, 0);
+const listTargetMatch = own(context.getSuratMasuk({ dispositionTargets: ['Bidang Logistik'] }));
+assert.equal(listTargetMatch.total, 1);
+assert.equal(own(context.getSuratMasuk({ dispositionTargets: 'Bidang Logistik' })).error, 'VALIDATION_ERROR');
+assert.equal(own(context.getIncomingReport({ keyword: '', sender: 7 })).error, 'VALIDATION_ERROR');
 assert.equal(own(context.getIncomingReport({ keyword: '', dispositionTarget: ['Subbag TU'] })).error, 'VALIDATION_ERROR');
 assert.equal(own(context.getIncomingReport({ keyword: '', fromDate: '2026-02-30' })).error, 'VALIDATION_ERROR');
 assert.equal(own(context.getIncomingReport({ keyword: '', fromDate: '2026-11-01', toDate: '2026-10-01' })).error, 'VALIDATION_ERROR');

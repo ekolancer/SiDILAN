@@ -47,7 +47,7 @@ Tab `Users` yang ada pada workbook tidak digunakan sebagai login username/passwo
 | Fitur | Perilaku yang diperlukan |
 | --- | --- |
 | Dashboard sederhana | Jumlah pencatatan, surat diterima bulan berjalan, distribusi posisi surat dan pencatatan yang memiliki keterangan tindak lanjut |
-| Daftar surat masuk | Menampilkan seluruh data sejak pertama dibuka, dengan pencarian, filter, urutan tampilan dan paginasi 10/50/100 baris (default 10) |
+| Daftar surat masuk | Menampilkan seluruh data saat menu dipilih, dengan pencarian, filter posisi/asal/tujuan dispo, tabel 14 kolom dan paginasi 10/50/100 baris (default 10) |
 | Pencatatan baru | Formulir yang menyimpan data ke 14 kolom yang sama |
 | Detail surat | Menampilkan identitas, disposisi, posisi, keterangan tindak lanjut dan tautan berkas |
 | Edit pencatatan | Memperbarui hanya kolom yang diubah pengguna; field lain tetap dipertahankan |
@@ -135,7 +135,7 @@ Tidak ada pengajuan penutupan, buka kembali surat, tahapan wajib, atau antrean r
 
 Filter periode menggunakan tanggal diterima. Tanggal yang tidak dapat dipahami tidak ditebak dan disebutkan jumlahnya pada rekap periode. Total pencatatan tetap dapat dihitung tanpa tanggal. Jika variasi label posisi ingin digabung pada grafik, tampilkan aturan penggabungan dan biarkan nilai sumber tetap utuh.
 
-Rekap menampilkan seluruh surat saat dibuka, dengan 10 baris per halaman pratinjau. Filter Asal Surat dan Tujuan Dispo berasal dari nilai register; tujuan gabungan dipisah pada koma/titik koma. Rekap cetak/CSV tetap memuat seluruh hasil filter dan mempertahankan arti 14 kolom. URL berkas hanya diekspor bila pengguna memilihnya; teks yang menyerupai formula diekspor secara aman.
+Rekap tidak memuat hasil sebelum pengguna menekan Tampilkan Rekap. Filter posisi/asal/tujuan dispo memakai Select shadcn-vue; asal dan tujuan berasal dari nilai register dan tujuan gabungan dipisah pada koma/titik koma. Reset filter berada di ujung baris filter. Pratinjau memakai 10 baris per halaman. Rekap cetak/CSV tetap memuat seluruh hasil filter dan mempertahankan arti 14 kolom. URL berkas hanya diekspor bila pengguna memilihnya; teks yang menyerupai formula diekspor secara aman.
 
 ## 10. Kriteria penerimaan
 

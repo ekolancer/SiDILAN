@@ -100,7 +100,8 @@ function getInitialData() {
   try {
     const { config, email, role } = requireRole_('READ');
     const register = readRegister_(config);
-    return { success: true, email, role, positions: collectPositions_(register.sheet, register.records), warningCount: register.warningCount };
+    const options = collectReportOptions_(register.records);
+    return { success: true, email, role, positions: collectPositions_(register.sheet, register.records), ...options, warningCount: register.warningCount };
   } catch (error) {
     return { success: false, ...safeError_(error) };
   }
@@ -118,6 +119,10 @@ function getSuratMasuk(query) {
     if (selectedPositions !== undefined && (!Array.isArray(selectedPositions) || selectedPositions.length > 100 || selectedPositions.some(value => typeof value !== 'string'))) {
       throw new Error('VALIDATION_ERROR');
     }
+    const sender = query.sender === undefined ? '' : query.sender;
+    const dispositionTargets = query.dispositionTargets === undefined ? [] : query.dispositionTargets;
+    if (typeof sender !== 'string' || sender.length > 5000 || !Array.isArray(dispositionTargets) || dispositionTargets.length > 100 || dispositionTargets.some(value => typeof value !== 'string' || value.length > 500)) throw new Error('VALIDATION_ERROR');
+    const selectedTargets = new Set(dispositionTargets);
     const pageValue = query.page === undefined ? 1 : Number(query.page);
     if (!Number.isFinite(pageValue) || pageValue < 1 || !Number.isInteger(pageValue)) throw new Error('VALIDATION_ERROR');
     const pageSize = query.pageSize === undefined ? 10 : Number(query.pageSize);
@@ -126,13 +131,16 @@ function getSuratMasuk(query) {
     const register = readRegister_(config);
     const selected = selectedPositions === undefined ? null : new Set(selectedPositions);
     const normalizedKeyword = keyword.toLocaleLowerCase();
-    const matches = register.records.filter(record => matchesRegisterFilter_(record, normalizedKeyword, selected));
+    const matches = register.records.filter(record => matchesRegisterFilter_(record, normalizedKeyword, selected) &&
+      (!sender || record.sender === sender) &&
+      (!selectedTargets.size || String(record.dispositionTargets || '').split(/[,;]/).some(target => selectedTargets.has(target.trim()))));
     const pageCount = Math.max(1, Math.ceil(matches.length / pageSize));
     const page = Math.min(pageValue, pageCount);
     return {
       success: true,
       records: matches.slice((page - 1) * pageSize, page * pageSize),
       positions: collectPositions_(register.sheet, register.records),
+      ...collectReportOptions_(register.records),
       total: matches.length,
       page,
       pageSize,
@@ -251,6 +259,13 @@ function readRecordAtRow_(sheet, rowNumber) {
   const values = range.getValues()[0];
   if (!values.slice(1, 6).some(value => !isPlaceholder_(value))) return null;
   return buildRecord_(rowNumber, values, range.getDisplayValues()[0], range.getFormulas()[0], range.getRichTextValues()[0]);
+}
+
+function collectReportOptions_(records) {
+  return {
+    senders: [...new Set(records.map(record => record.sender).filter(value => !isPlaceholder_(value)))].sort((a, b) => a.localeCompare(b, 'id')),
+    targets: [...new Set(records.flatMap(record => String(record.dispositionTargets || '').split(/[,;]/).map(value => value.trim()).filter(value => !isPlaceholder_(value))))].sort((a, b) => a.localeCompare(b, 'id'))
+  };
 }
 
 function collectPositions_(sheet, records) {

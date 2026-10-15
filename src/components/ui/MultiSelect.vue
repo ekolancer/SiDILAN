@@ -1,13 +1,35 @@
 <script setup>
-defineProps({ modelValue: { type: Array, default: () => [] }, options: { type: Array, default: () => [] } })
+import { computed } from 'vue'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+
+const props = defineProps({
+  modelValue: { type: Array, default: () => [] },
+  options: { type: Array, default: () => [] },
+  placeholder: { type: String, default: 'Pilih opsi' },
+  ariaLabel: { type: String, default: 'Pilih beberapa opsi' },
+})
 const emit = defineEmits(['update:modelValue'])
-function update(event) {
-  emit('update:modelValue', [...event.target.selectedOptions].map(option => option.value))
+const emptyValue = '__EMPTY_FILTER_VALUE__'
+const selectedValue = computed(() => props.modelValue.map(value => value === '' ? emptyValue : value))
+const selectedLabel = computed(() => {
+  if (!props.modelValue.length) return ''
+  if (props.modelValue.length === props.options.length) return 'Semua dipilih'
+  const labels = props.modelValue.map(value => props.options.find(option => option.value === value)?.label || value)
+  return labels.length > 2 ? `${labels.length} dipilih` : labels.join(', ')
+})
+function update(value) {
+  const values = Array.isArray(value) ? value : value == null ? [] : [value]
+  emit('update:modelValue', values.map(item => item === emptyValue ? '' : item))
 }
 </script>
 
 <template>
-  <select multiple :value="modelValue" class="min-h-11 min-w-48 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2" @change="update">
-    <option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option>
-  </select>
+  <Select :model-value="selectedValue" :multiple="true" @update:model-value="update">
+    <SelectTrigger class="multi-select-trigger" :aria-label="ariaLabel">
+      <SelectValue :placeholder="placeholder">{{ selectedLabel }}</SelectValue>
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem v-for="option in options" :key="option.value || emptyValue" :value="option.value || emptyValue">{{ option.label }}</SelectItem>
+    </SelectContent>
+  </Select>
 </template>

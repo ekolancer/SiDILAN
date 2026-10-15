@@ -249,13 +249,37 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .latest-table td:nth-child(3) { min-width: 13rem; }
 .latest-table .letter-position { display: inline-block; text-align: left; }
 @media (max-width: 1399px) { .dashboard-charts { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dashboard-charts > :last-child { grid-column: 1 / -1; } }
-@media (max-width: 1199px) { .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 767px) { .dashboard-charts { grid-template-columns: minmax(0, 1fr); } .dashboard-charts > :last-child { grid-column: auto; } }
+@media (max-width: 1199px) {
+  .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .list-filter-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .list-filter-actions { justify-content: flex-end; }
+  .report-filter-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .report-reset { justify-self: end; }
+}
+@media (max-width: 767px) {
+  .dashboard-charts { grid-template-columns: minmax(0, 1fr); }
+  .dashboard-charts > :last-child { grid-column: auto; }
+  .list-filter-row, .report-filter-row { grid-template-columns: minmax(0, 1fr); }
+  .list-filter-actions { justify-content: stretch; }
+  .list-filter-actions > button { flex: 1; }
+  .report-reset { justify-self: stretch; }
+}
 @media (max-width: 479px) { .summary-grid { gap: .65rem; } .summary-grid > div { padding: 1rem; } .summary-grid dt { flex-direction: column; min-height: 5.5rem; } .dashboard-panel { padding: 1rem; } }
 .report-filter-select { width: 100%; min-width: 0; height: 2.75rem; padding: .4rem .75rem; border: 1px solid #b6c9d9; border-radius: .45rem; background: #fff; color: #172b4d; }
+.multi-select-trigger { width: 100%; min-width: 0; }
+.multi-select-trigger [data-slot="select-value"] { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.list-filter-row { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1.2fr) auto; align-items: end; gap: .85rem; padding: 1rem; border: 1px solid #cfdeea; border-radius: .7rem; background: #e8f1f8; }
+.list-filter-actions { display: flex; align-items: center; gap: .5rem; }
 .report-filter-select:focus-visible { outline: 2px solid #1263a0; outline-offset: 2px; }
+.report-filter-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 1.2fr) auto; align-items: end; gap: .75rem; }
+.report-reset { align-self: end; white-space: nowrap; }
 .report-print-table { display: none; }
 .report-scroll { max-width: 100%; overflow: auto; border: 1px solid #cbd5e1; border-radius: .5rem; }
+.list-register-scroll { margin-top: 1rem; }
+.list-register-table { min-width: 84rem; }
+.list-register-table th, .list-register-table td { min-width: 8rem; }
+.list-register-table th:last-child, .list-register-table td:last-child { min-width: 10rem; }
+.list-row-actions { display: flex; align-items: center; gap: .4rem; }
 .report-scroll:focus-visible { outline: 2px solid #1263a0; outline-offset: 2px; }
 .report-table { width: 100%; border-collapse: collapse; font-size: .8rem; line-height: 1.4; }
 .report-table th, .report-table td { min-width: 10rem; max-width: 18rem; padding: .7rem; border: 1px solid #cbd5e1; text-align: left; vertical-align: top; overflow-wrap: anywhere; white-space: pre-wrap; }
@@ -280,4 +304,16 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .report-table th { background: #eee; }
   .report-table tr { break-inside: avoid; }
   .report-table thead { display: table-header-group; }
+}
+@media (max-width: 1199px) {
+  .list-filter-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .list-filter-actions { justify-content: flex-end; }
+  .report-filter-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .report-reset { justify-self: end; }
+}
+@media (max-width: 767px) {
+  .list-filter-row, .report-filter-row { grid-template-columns: minmax(0, 1fr); }
+  .list-filter-actions { justify-content: stretch; }
+  .list-filter-actions > button { flex: 1; }
+  .report-reset { justify-self: stretch; }
 }

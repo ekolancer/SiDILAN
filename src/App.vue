@@ -13,10 +13,13 @@ const loadingStatus = ref(true)
 const statusError = ref('')
 const email = ref('')
 const role = ref('')
-const selectedPosition = ref(null)
-const allPositions = ref([])
-const keyword = ref('')
 const selectedPositions = ref([])
+const selectedTargets = ref([])
+const selectedSender = ref('')
+const allPositions = ref([])
+const allSenders = ref([])
+const allTargets = ref([])
+const keyword = ref('')
 const listLoading = ref(false)
 const listError = ref('')
 const emptyMessage = ref('Masukkan kata kunci pencarian.')
@@ -75,6 +78,7 @@ function emptyCreateForm() {
 
 const pageCount = computed(() => Math.max(1, Math.ceil(total.value / pageSize.value)))
 const positionOptions = computed(() => allPositions.value.map(value => ({ value, label: value || 'Belum diisi' })))
+const targetOptions = computed(() => allTargets.value.map(value => ({ value, label: value })))
 const fields = [
   ['receivedDate', 'Tanggal diterima'], ['letterNumber', 'Nomor surat'], ['letterDate', 'Tanggal surat'],
   ['sender', 'Asal surat'], ['subject', 'Perihal'], ['documentDescription', 'Uraian berkas'],
@@ -151,7 +155,11 @@ async function loadPositions() {
       return
     }
     allPositions.value = result.positions || []
+    allSenders.value = result.senders || []
+    allTargets.value = result.targets || []
     reportPositions.value = [...allPositions.value]
+    reportSenders.value = allSenders.value
+    reportTargets.value = allTargets.value
     warningCount.value = result.warningCount || 0
   } catch (error) {
     listError.value = 'Data awal gagal dimuat. Periksa koneksi dan izin spreadsheet.'
@@ -168,7 +176,9 @@ async function search(resetPage = true, preserveDetail = false) {
   try {
     const result = await callAppsScript('getSuratMasuk', {
       keyword: trimmed,
-      positions: selectedPosition.value === null ? undefined : [selectedPosition.value === 0 ? '' : selectedPosition.value],
+      positions: selectedPositions.value.length ? [...selectedPositions.value] : undefined,
+      sender: selectedSender.value,
+      dispositionTargets: [...selectedTargets.value],
       page: page.value,
       pageSize: pageSize.value,
     })
@@ -182,6 +192,8 @@ async function search(resetPage = true, preserveDetail = false) {
     page.value = result.page || 1
     pageSize.value = result.pageSize || 10
     allPositions.value = result.positions || allPositions.value
+    allSenders.value = result.senders || allSenders.value
+    allTargets.value = result.targets || allTargets.value
     warningCount.value = result.warningCount || 0
     emptyMessage.value = total.value ? `${total.value} pencatatan ditemukan.` : 'Tidak ada data yang cocok.'
   } catch (error) {
@@ -193,11 +205,25 @@ async function search(resetPage = true, preserveDetail = false) {
 
 function resetSearch() {
   keyword.value = ''
-  selectedPosition.value = null
+  selectedPositions.value = []
+  selectedSender.value = ''
+  selectedTargets.value = []
   page.value = 1
   listError.value = ''
   detail.value = null
   search()
+}
+
+function resetReportFilters() {
+  reportKeyword.value = ''
+  reportPositions.value = [...allPositions.value]
+  reportSender.value = ''
+  reportTarget.value = ''
+  fromDate.value = ''
+  toDate.value = ''
+  report.value = null
+  reportError.value = ''
+  reportPage.value = 1
 }
 
 function changePageSize(event) {
@@ -218,14 +244,20 @@ async function openDetail(record) {
     })
     if (!result?.success) {
       detailError.value = result?.message || 'Detail tidak dapat dimuat.'
-      return
+      return false
     }
     detail.value = result.record
+    return true
   } catch (error) {
     detailError.value = 'Detail gagal dimuat. Muat ulang daftar.'
+    return false
   } finally {
     detailLoading.value = false
   }
+}
+
+async function openEdit(record) {
+  if (await openDetail(record)) startEditing('full')
 }
 
 function startEditing(mode = 'full') {
@@ -295,7 +327,9 @@ async function submitCreate(confirmDuplicate = false) {
     duplicateCandidates.value = []
     createForm.value = emptyCreateForm()
     keyword.value = result.agenda
-    selectedPosition.value = null
+    selectedPositions.value = []
+    selectedSender.value = ''
+    selectedTargets.value = []
     await search()
   } catch (error) {
     createError.value = 'Hasil simpan belum diketahui. Periksa daftar sebelum mencoba lagi.'
@@ -314,7 +348,6 @@ function openCreate() {
 function switchView(view) {
   activeView.value = view
   if (view === 'dashboard') loadDashboard()
-  if (view === 'report' && !report.value && !reportLoading.value) loadReport()
 }
 
 async function loadDashboard() {
@@ -523,14 +556,17 @@ onUnmounted(() => clearInterval(clockTimer))
           <div class="report-controls">
             <h1 id="report-title" class="text-2xl font-semibold tracking-tight">Rekap surat masuk</h1>
             <p class="mt-1 text-sm text-slate-700">Pratinjau seluruh 14 kolom. Filter periode memakai tanggal diterima.</p>
-            <form class="mt-5 grid gap-4 sm:grid-cols-2" @submit.prevent="loadReport">
-              <label class="grid gap-1 text-sm font-medium sm:col-span-2">Kata kunci (opsional)<Input v-model="reportKeyword" maxlength="200" placeholder="Agenda, nomor surat, asal, atau perihal" /></label>
-              <label class="grid gap-1 text-sm font-medium">Dari tanggal<Input v-model="fromDate" type="date" :max="toDate || undefined" /></label>
-              <label class="grid gap-1 text-sm font-medium">Sampai tanggal<Input v-model="toDate" type="date" :min="fromDate || undefined" /></label>
-              <label class="grid gap-1 text-sm font-medium sm:col-span-2">Posisi surat (pilih beberapa; kosong berarti tanpa hasil)<MultiSelect v-model="reportPositions" :options="positionOptions" aria-label="Filter posisi rekap" /></label>
-              <label class="grid gap-1 text-sm font-medium">Asal Surat<select v-model="reportSender" class="report-filter-select"><option value="">Semua asal surat</option><option v-for="sender in reportSenders" :key="sender" :value="sender">{{ sender }}</option></select></label>
-              <label class="grid gap-1 text-sm font-medium">Tujuan Dispo<select v-model="reportTarget" class="report-filter-select"><option value="">Semua tujuan dispo</option><option v-for="target in reportTargets" :key="target" :value="target">{{ target }}</option></select></label>
-              <div class="flex flex-wrap items-center gap-3 sm:col-span-2"><Button type="submit" :disabled="reportLoading">{{ reportLoading ? 'Memuat...' : 'Tampilkan rekap' }}</Button><p class="text-sm text-slate-700">Kata kunci boleh kosong untuk semua surat pada posisi terpilih.</p></div>
+            <form class="report-filter-form mt-5 grid gap-4" @submit.prevent="loadReport">
+              <label class="grid gap-1 text-sm font-medium">Kata kunci (opsional)<Input v-model="reportKeyword" maxlength="200" placeholder="Agenda, nomor surat, asal, atau perihal" /></label>
+              <div class="report-filter-row">
+                <label class="grid gap-1 text-sm font-medium">Dari tanggal<Input v-model="fromDate" type="date" :max="toDate || undefined" /></label>
+                <label class="grid gap-1 text-sm font-medium">Sampai tanggal<Input v-model="toDate" type="date" :min="fromDate || undefined" /></label>
+                <label class="grid gap-1 text-sm font-medium">Posisi surat<MultiSelect v-model="reportPositions" :options="positionOptions" aria-label="Filter posisi rekap" placeholder="Pilih posisi" /></label>
+                <label class="grid gap-1 text-sm font-medium">Asal Surat<Select v-model="reportSender"><SelectTrigger class="w-full"><SelectValue placeholder="Semua asal surat" /></SelectTrigger><SelectContent><SelectItem v-for="sender in reportSenders" :key="sender" :value="sender">{{ sender }}</SelectItem></SelectContent></Select></label>
+                <label class="grid gap-1 text-sm font-medium">Tujuan Dispo<Select v-model="reportTarget"><SelectTrigger class="w-full"><SelectValue placeholder="Semua tujuan dispo" /></SelectTrigger><SelectContent><SelectItem v-for="target in reportTargets" :key="target" :value="target">{{ target }}</SelectItem></SelectContent></Select></label>
+                <Button type="button" variant="outline" class="report-reset" @click="resetReportFilters">Reset filter</Button>
+              </div>
+              <div class="flex flex-wrap items-center gap-3"><Button type="submit" :disabled="reportLoading">{{ reportLoading ? 'Memuat...' : 'Tampilkan rekap' }}</Button><p class="text-sm text-slate-700">Kata kunci boleh kosong untuk semua surat pada posisi terpilih.</p></div>
             </form>
             <p v-if="reportError" class="mt-4 text-sm text-red-800" role="alert">{{ reportError }}</p>
             <div v-if="reportLoading" class="mt-6" role="status" aria-label="Memuat rekap"><p class="text-sm text-slate-700">Memuat rekap...</p><div class="skeleton-lines mt-4" aria-hidden="true"><span></span><span></span><span></span></div></div>
@@ -582,19 +618,11 @@ onUnmounted(() => clearInterval(clockTimer))
             <Button type="submit" :disabled="listLoading"><Search class="h-4 w-4" aria-hidden="true" /> Cari</Button>
           </form>
 
-          <div class="mt-4 flex flex-wrap items-end gap-3">
-            <div class="grid min-w-48 flex-1 gap-1 sm:max-w-xs">
-              <label for="position-filter" class="text-sm font-medium">Posisi surat</label>
-              <Select v-model="selectedPosition">
-                <SelectTrigger id="position-filter" class="w-full"><SelectValue placeholder="Semua posisi" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem v-if="allPositions.includes('')" :value="0">Belum diisi</SelectItem>
-                  <SelectItem v-for="option in allPositions.filter(Boolean)" :key="option" :value="option">{{ option }}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button variant="outline" @click="resetSearch">Reset</Button>
-            <Button variant="outline" :disabled="listLoading" @click="keyword.trim() ? search(false) : loadPositions()"><RotateCw class="h-4 w-4" aria-hidden="true" /> Muat ulang</Button>
+          <div class="list-filter-row mt-4">
+            <label class="grid gap-1 text-sm font-medium">Posisi Surat<MultiSelect v-model="selectedPositions" :options="positionOptions" aria-label="Filter posisi surat" placeholder="Semua posisi" /></label>
+            <label class="grid gap-1 text-sm font-medium">Asal Surat<Select v-model="selectedSender"><SelectTrigger class="w-full"><SelectValue placeholder="Semua asal surat" /></SelectTrigger><SelectContent><SelectItem v-for="sender in allSenders" :key="sender" :value="sender">{{ sender }}</SelectItem></SelectContent></Select></label>
+            <label class="grid gap-1 text-sm font-medium">Tujuan Dispo<MultiSelect v-model="selectedTargets" :options="targetOptions" aria-label="Filter tujuan disposisi" placeholder="Semua tujuan" /></label>
+            <div class="list-filter-actions"><Button variant="outline" @click="resetSearch">Reset filter</Button><Button variant="outline" :disabled="listLoading" @click="search(false)"><RotateCw class="h-4 w-4" aria-hidden="true" /> Muat ulang</Button></div>
           </div>
 
           <p v-if="warningCount" class="mt-4 text-sm text-amber-900" role="status">{{ warningCount }} baris dilewati karena data tidak dapat dibaca.</p>
@@ -605,18 +633,17 @@ onUnmounted(() => clearInterval(clockTimer))
             <Search class="h-6 w-6" aria-hidden="true" />
             <p class="mt-3 font-semibold">Tidak ada surat ditemukan</p>
             <p class="mt-1 max-w-prose text-sm text-slate-700">Ubah kata kunci atau filter, lalu coba kembali.</p>
-            <Button v-if="keyword || selectedPosition !== null" variant="outline" class="mt-4" @click="resetSearch">Reset filter</Button>
+            <Button v-if="keyword || selectedPositions.length || selectedSender || selectedTargets.length" variant="outline" class="mt-4" @click="resetSearch">Reset filter</Button>
           </div>
 
-          <div v-if="records.length" class="letter-list mt-3">
-            <article v-for="record in records" :key="`${record.rowHint}-${record.agenda}`" class="letter-row">
-              <div class="min-w-0">
-                <p class="letter-agenda">{{ display(record.agenda) }}</p>
-                <h2 class="letter-subject">{{ display(record.subject) }}</h2>
-                <p class="letter-meta">{{ display(record.sender) }} <span aria-hidden="true">/</span> {{ display(record.letterNumber) }} <span aria-hidden="true">/</span> {{ display(record.receivedDate) }}</p>
-              </div>
-              <div class="letter-actions"><span class="letter-position">{{ formatPosition(record.letterPosition) }}</span><Button variant="outline" @click="openDetail(record)">Lihat detail</Button></div>
-            </article>
+          <div v-if="records.length" class="report-scroll list-register-scroll mt-4" tabindex="0" role="region" aria-label="Daftar surat masuk 14 kolom, geser untuk melihat semua kolom">
+            <table class="report-table list-register-table">
+              <thead><tr><th v-for="[key, label] in reportColumns" :key="key" scope="col">{{ label }}</th><th scope="col">Aksi</th></tr></thead>
+              <tbody><tr v-for="record in records" :key="`${record.rowHint}-${record.agenda}`">
+                <td v-for="[key] in reportColumns" :key="key" :class="{ 'font-semibold tabular-nums': key === 'agenda' }">{{ display(record[key]) }}</td>
+                <td><div class="list-row-actions"><Button variant="outline" size="sm" @click="openDetail(record)">Lihat</Button><Button v-if="role === 'WRITE'" size="sm" @click="openEdit(record)">Edit</Button></div></td>
+              </tr></tbody>
+            </table>
           </div>
 
           <nav v-if="total > 0" class="list-pagination mt-6" aria-label="Paginasi daftar surat">

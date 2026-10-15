@@ -72,18 +72,9 @@ Saat menu dibuka, tampilkan seluruh register sejak awal dengan 10 baris per hala
 
 Filter utama: posisi surat. Filter tambahan: memiliki disposisi, memiliki keterangan tindak lanjut, atau memiliki tautan berkas. Filter tidak memerlukan master unit/PIC.
 
-| Kolom default | Perilaku |
-| --- | --- |
-| Agenda | Teks asli, termasuk suffix; tautan detail |
-| Tanggal diterima | Tanggal yang dapat dibaca diformat ringkas; teks tidak dikenali tetap terlihat |
-| Nomor surat | Teks utuh dengan nol depan |
-| Asal surat | Instansi/nama sesuai register |
-| Perihal | Maksimal dua baris pada daftar; penuh di detail |
-| Tujuan disposisi | Teks ringkas; gabungan tujuan tidak dipecah menjadi penugasan |
-| Posisi surat | Badge teks asli atau Belum diisi |
-| Aksi | Lihat; Edit bagi pencatat |
+Daftar menggunakan tabel register 14 kolom yang sama seperti Rekap. Setiap baris punya aksi Lihat dan Edit bagi pencatat. Filter berbasis komponen Select shadcn-vue: kata kunci, posisi (multi-pilih), asal surat dan tujuan disposisi (multi-pilih; tujuan gabungan dipisah koma/titik koma). Opsi berasal dari register penuh. Paginasi default 10 baris, pilihan 10/50/100 serta tombol nomor halaman, Sebelumnya dan Berikutnya.
 
-Sorting hanya memengaruhi tampilan. Filter tetap dipertahankan setelah pengguna kembali dari detail.
+Filter tetap dipertahankan setelah pengguna kembali dari detail.
 
 Pada mobile, kartu menampilkan agenda, perihal, asal, tanggal dan posisi. Paginasi menata ulang kontrol menjadi susunan ringkas tanpa luapan horizontal. Detail menjadi tempat melihat semua field. Baris template tidak tampil; baris surat sebagian tetap tampil dengan field kosong yang jelas.
 
@@ -124,7 +115,7 @@ Hak akses berkas tetap mengikuti Google Drive. Jika akun tidak memiliki izin ber
 
 ## 8. Rekap
 
-Saat menu dibuka, seluruh surat langsung dimuat tanpa kata kunci. Preview register 14 kolom menampilkan 10 baris per halaman. Filter mencakup kata kunci, periode, posisi, Asal Surat dan Tujuan Dispo; dua filter terakhir berupa dropdown nilai aktual dari seluruh register. Tujuan gabungan dipisah pada koma/titik koma menjadi opsi masing-masing. Header memuat nama aplikasi/unit, filter dan waktu pembuatan.
+Rekap kosong saat menu dibuka; data hanya dimuat setelah pengguna menekan **Tampilkan rekap**. Filter memakai komponen Select shadcn-vue untuk posisi (multi-pilih), Asal Surat dan Tujuan Dispo dalam satu baris pada desktop, dengan Reset filter di ujung kanan. Tujuan gabungan dipisah pada koma/titik koma menjadi opsi masing-masing. Preview register 14 kolom menampilkan 10 baris per halaman; Cetak dan CSV berisi seluruh hasil filter. Header cetak memuat nama aplikasi/unit, filter dan waktu pembuatan.
 
 Cetak menggunakan layout landscape, header tabel berulang dan gaya hitam-putih yang tetap terbaca. Cetak dan CSV memakai seluruh hasil filter, bukan hanya halaman pratinjau aktif. Tautan berkas menjadi opsi ekspor, tidak disisipkan tanpa pilihan pengguna.
 
