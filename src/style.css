@@ -297,9 +297,13 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .report-print-table { display: none; }
 .report-scroll { max-width: 100%; overflow: auto; border: 1px solid #cbd5e1; border-radius: .5rem; }
 .list-register-scroll { margin-top: 1rem; }
-.list-register-table { min-width: 84rem; }
+.list-register-table { min-width: 70rem; }
 .list-register-table th, .list-register-table td { min-width: 8rem; }
-.list-register-table th:last-child, .list-register-table td:last-child { min-width: 10rem; }
+.list-register-table th:first-child, .list-register-table td:nth-child(2) { min-width: 7rem; }
+.list-register-table th:nth-child(2), .list-register-table td:nth-child(2) { min-width: 9rem; }
+.list-register-table th:nth-child(4), .list-register-table td:nth-child(4) { min-width: 12rem; }
+.list-register-table th:nth-child(5), .list-register-table td:nth-child(5) { min-width: 16rem; }
+.list-register-table th:nth-child(6), .list-register-table td:nth-child(6) { min-width: 12rem; }
 .list-row-actions { display: flex; align-items: center; gap: .4rem; }
 .report-scroll:focus-visible { outline: 2px solid #1263a0; outline-offset: 2px; }
 .report-table { width: 100%; border-collapse: collapse; font-size: .8rem; line-height: 1.4; }
@@ -409,6 +413,20 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .workspace-panel { border-color: #ebecf1; box-shadow: none; }
   .page-list > form[role="search"], .list-filter-row, .page-report .report-controls { border-color: #ecedf2; background: #f8f9fb; }
   .page-list .list-pagination { border-color: #ecedf2; background: #f9f9fc; }
+  .page-create:focus, .page-detail:focus { outline: 2px solid #7152ad; outline-offset: 3px; }
+  .record-form { display: grid; gap: 1.4rem; }
+  .record-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; min-width: 0; padding: 1.2rem 0 0; border-top: 1px solid #e7e5ed; }
+  .record-fields legend { padding: 0 .65rem 0 0; color: #302b48; font-size: 1rem; font-weight: 650; }
+  .record-fields > :is(label, .record-field) { min-width: 0; padding: .7rem; border-radius: .45rem; background: #f8f8fb; }
+  .record-fields > :is(label, .record-field):focus-within { background: #f2eef9; }
+  .list-register-table thead th:first-child { position: sticky; left: 0; z-index: 2; background: #f5f5f9; }
+  .list-register-table tbody th:first-child { position: sticky; left: 0; z-index: 1; background: #fff; }
+  .list-register-table tbody tr:nth-child(even) th:first-child { background: #fbfbfd; }
+  .list-register-table tbody tr:hover th:first-child { background: #f7f4fb; }
+  .list-register-table th:first-child, .list-register-table tbody th:first-child { width: 7rem; min-width: 7rem; max-width: 7rem; }
+  .status-legend > div:last-child dt::before { background: #a8a9b6; }
+  .detail-actions { max-width: 100%; }
+  .detail-actions button { white-space: normal; text-align: center; }
   .page-buttons .page-number.is-active { background: #7152ad; }
   .page-create, .page-detail { border-color: #e6e4ef; box-shadow: 0 12px 30px -28px #51467b; }
   .page-create form > label, .page-detail form > div { background: #f8f8fb; }
@@ -450,6 +468,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .app-topbar .app-header-inner { padding: .75rem 1.25rem; }
   .dashboard-charts { grid-template-columns: minmax(0, 1fr); }
   .dashboard-charts > :last-child { grid-column: auto; }
+  .record-fields { grid-template-columns: minmax(0, 1fr); }
+  .detail-actions { width: 100%; justify-content: flex-start; }
   .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .donut-layout { grid-template-columns: minmax(0, 1fr); }
 }

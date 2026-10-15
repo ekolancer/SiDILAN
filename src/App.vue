@@ -22,6 +22,8 @@ const allTargets = ref([])
 const keyword = ref('')
 const listLoading = ref(false)
 const listError = ref('')
+const appliedListQuery = ref(null)
+const saveNotice = ref('')
 const emptyMessage = ref('Masukkan kata kunci pencarian.')
 const records = ref([])
 const total = ref(0)
@@ -41,6 +43,7 @@ const editBusy = ref(false)
 const editError = ref('')
 const editForm = ref({})
 const editBaseline = ref({})
+const editRecord = ref(null)
 const editMode = ref('full')
 const updateDescription = ref(false)
 const showCreate = ref(false)
@@ -48,10 +51,14 @@ const createBusy = ref(false)
 const createError = ref('')
 const duplicateCandidates = ref([])
 const createForm = ref(emptyCreateForm())
+const createBaseline = ref(emptyCreateForm())
 const activeView = ref('dashboard')
 const jakartaClock = ref('')
 const globalSearchInput = ref(null)
+const detailSection = ref(null)
+const createSection = ref(null)
 let clockTimer = null
+let detailRequestId = 0
 const dashboard = ref(null)
 const dashboardLoading = ref(false)
 const dashboardError = ref('')
@@ -87,6 +94,13 @@ const fields = [
   ['parafDateOrNote', 'Keterangan / tanggal paraf'], ['letterPosition', 'Posisi surat'],
   ['followupNote', 'Keterangan tindak lanjut'],
 ]
+const editGroups = [
+  { title: 'Identitas surat', keys: ['receivedDate', 'letterNumber', 'letterDate', 'sender', 'subject'] },
+  { title: 'Disposisi', keys: ['disposition', 'dispositionTargets', 'parafDateOrNote'] },
+  { title: 'Posisi dan tindak lanjut', keys: ['letterPosition', 'followupNote'] },
+  { title: 'Berkas', keys: ['letterFileReference', 'followupReference'] },
+]
+const editLabels = Object.fromEntries(fields.concat([['letterFileReference', 'Tautan berkas surat'], ['followupReference', 'Berkas / catatan tindak lanjut']]))
 const reportColumns = [
   ['agenda', 'Nomor agenda'], ['receivedDate', 'Tanggal diterima'], ['letterNumber', 'No. surat'],
   ['letterDate', 'Tanggal surat'], ['sender', 'Asal surat'], ['subject', 'Perihal'],
@@ -95,13 +109,16 @@ const reportColumns = [
   ['letterFileReference', 'Link berkas'], ['letterPosition', 'Posisi surat'],
   ['followupNote', 'Keterangan tindak lanjut'], ['followupReference', 'Link berkas tindak lanjut'],
 ]
-const reportListColumns = reportColumns.slice(0, 9).filter(([key]) => key !== 'documentDescription')
 const reportQuery = computed(() => ({
   keyword: reportKeyword.value.trim(), positions: [...reportPositions.value],
   sender: reportSender.value, dispositionTarget: reportTarget.value,
   fromDate: fromDate.value, toDate: toDate.value,
 }))
 const reportIsCurrent = computed(() => report.value && JSON.stringify(reportQuery.value) === report.value.queryKey)
+const listQuery = computed(() => JSON.stringify({ keyword: keyword.value.trim(), positions: selectedPositions.value, sender: selectedSender.value, targets: selectedTargets.value }))
+const listIsCurrent = computed(() => appliedListQuery.value === listQuery.value)
+const editIsDirty = computed(() => editingDetail.value && (updateDescription.value || Object.entries(editForm.value).some(([key, value]) => value !== editBaseline.value[key])))
+const createIsDirty = computed(() => showCreate.value && Object.entries(createForm.value).some(([key, value]) => value !== createBaseline.value[key]))
 const reportPageCount = computed(() => Math.max(1, Math.ceil((report.value?.records.length || 0) / reportPageSize)))
 const reportRows = computed(() => report.value?.records.slice((reportPage.value - 1) * reportPageSize, reportPage.value * reportPageSize) || [])
 const followupStatuses = computed(() => [
@@ -168,13 +185,46 @@ async function loadPositions() {
   }
 }
 
+function confirmDiscard() {
+  if (editBusy.value || createBusy.value) return false
+  if ((editIsDirty.value || createIsDirty.value) && !window.confirm('Perubahan belum disimpan. Buang perubahan dan lanjutkan?')) return false
+  return true
+}
+
+function closeDetail() {
+  if (!confirmDiscard()) return
+  detailRequestId++
+  detail.value = null
+  cancelEditing(true)
+  saveNotice.value = ''
+}
+
+function closeCreate() {
+  if (!confirmDiscard()) return
+  showCreate.value = false
+  createForm.value = emptyCreateForm()
+}
+
+async function focusSection(section) {
+  await nextTick()
+  section.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  section.value?.focus({ preventScroll: true })
+}
+
 async function search(resetPage = true, preserveDetail = false) {
+  if (!preserveDetail && detail.value && !confirmDiscard()) return false
   const trimmed = keyword.value.trim()
   if (resetPage) page.value = 1
+  const queryKey = listQuery.value
   const currentRequest = ++requestId
   listLoading.value = true
   listError.value = ''
-  if (!preserveDetail) detail.value = null
+  appliedListQuery.value = null
+  if (!preserveDetail) {
+    detailRequestId++
+    detail.value = null
+    cancelEditing(true)
+  }
   try {
     const result = await callAppsScript('getSuratMasuk', {
       keyword: trimmed,
@@ -190,6 +240,7 @@ async function search(resetPage = true, preserveDetail = false) {
       return
     }
     records.value = result.records || []
+    appliedListQuery.value = queryKey
     total.value = result.total || 0
     page.value = result.page || 1
     pageSize.value = result.pageSize || 10
@@ -206,13 +257,16 @@ async function search(resetPage = true, preserveDetail = false) {
 }
 
 function resetSearch() {
+  if (!confirmDiscard()) return
+  detailRequestId++
+  detail.value = null
+  cancelEditing(true)
   keyword.value = ''
   selectedPositions.value = []
   selectedSender.value = ''
   selectedTargets.value = []
   page.value = 1
   listError.value = ''
-  detail.value = null
   search()
 }
 
@@ -228,22 +282,40 @@ function resetReportFilters() {
   reportPage.value = 1
 }
 
-function changePageSize(event) {
+async function changePageSize(event) {
+  const previousSize = pageSize.value
+  const previousPage = page.value
   pageSize.value = Number(event.target.value)
   page.value = 1
-  search(false)
+  if (await search(false) === false) {
+    pageSize.value = previousSize
+    page.value = previousPage
+  }
+}
+
+async function goToPage(nextPage) {
+  const previousPage = page.value
+  page.value = nextPage
+  if (await search(false) === false) page.value = previousPage
 }
 
 async function openDetail(record) {
+  if (!confirmDiscard()) return false
+  const currentRequest = ++detailRequestId
+  cancelEditing(true)
+  showCreate.value = false
   detail.value = record
   detailLoading.value = true
   detailError.value = ''
+  saveNotice.value = ''
+  focusSection(detailSection)
   try {
     const result = await callAppsScript('getSuratDetail', {
       rowHint: record.rowHint,
       agenda: record.agenda,
       expectedHash: record.expectedHash,
     })
+    if (currentRequest !== detailRequestId) return false
     if (!result?.success) {
       detailError.value = result?.message || 'Detail tidak dapat dimuat.'
       return false
@@ -251,10 +323,10 @@ async function openDetail(record) {
     detail.value = result.record
     return true
   } catch (error) {
-    detailError.value = 'Detail gagal dimuat. Muat ulang daftar.'
+    if (currentRequest === detailRequestId) detailError.value = 'Detail gagal dimuat. Muat ulang daftar.'
     return false
   } finally {
-    detailLoading.value = false
+    if (currentRequest === detailRequestId) detailLoading.value = false
   }
 }
 
@@ -263,8 +335,9 @@ async function openEdit(record) {
 }
 
 function startEditing(mode = 'full') {
-  if (!detail.value || role.value !== 'WRITE') return
+  if (!detail.value || detailLoading.value || role.value !== 'WRITE' || !confirmDiscard()) return
   editMode.value = mode
+  editRecord.value = { rowHint: detail.value.rowHint, agenda: detail.value.agenda, expectedHash: detail.value.expectedHash }
   const keys = (mode === 'quick' ? ['disposition', 'dispositionTargets', 'parafDateOrNote', 'letterPosition', 'followupNote'] : fields.map(([key]) => key).filter(key => key !== 'documentDescription')).concat(mode === 'full' ? ['letterFileReference', 'followupReference'] : [])
   editBaseline.value = Object.fromEntries(keys.map(key => [key, detail.value[key] || '']))
   editForm.value = { ...editBaseline.value }
@@ -273,14 +346,21 @@ function startEditing(mode = 'full') {
   editingDetail.value = true
 }
 
-function cancelEditing() {
+function cancelEditing(force = false) {
+  if (!force && !confirmDiscard()) return
   editingDetail.value = false
   editError.value = ''
   editForm.value = {}
+  editRecord.value = null
 }
 
 async function submitEdit() {
-  if (editBusy.value || !detail.value) return
+  if (editBusy.value || !detail.value || !editRecord.value) return
+  const identity = editRecord.value
+  if (detail.value.rowHint !== identity.rowHint || detail.value.agenda !== identity.agenda || detail.value.expectedHash !== identity.expectedHash) {
+    editError.value = 'Surat yang sedang diedit berubah. Muat ulang detail sebelum menyimpan.'
+    return
+  }
   const changes = Object.fromEntries(Object.entries(editForm.value).filter(([key, value]) => value !== editBaseline.value[key]))
   if (!Object.keys(changes).length && !updateDescription.value) {
     editError.value = 'Tidak ada perubahan untuk disimpan.'
@@ -290,9 +370,7 @@ async function submitEdit() {
   editError.value = ''
   try {
     const result = await callAppsScript('updateSuratMasuk', {
-      rowHint: detail.value.rowHint,
-      agenda: detail.value.agenda,
-      expectedHash: detail.value.expectedHash,
+      ...identity,
       changes,
       updateDescription: updateDescription.value,
     })
@@ -301,7 +379,8 @@ async function submitEdit() {
       return
     }
     detail.value = result.record
-    editingDetail.value = false
+    cancelEditing(true)
+    saveNotice.value = `Perubahan surat agenda ${display(result.record.agenda)} berhasil disimpan.`
     await search(false, true)
   } catch (error) {
     editError.value = 'Penyimpanan belum terkonfirmasi. Muat ulang sebelum mencoba lagi.'
@@ -328,6 +407,7 @@ async function submitCreate(confirmDuplicate = false) {
     showCreate.value = false
     duplicateCandidates.value = []
     createForm.value = emptyCreateForm()
+    saveNotice.value = `Surat agenda ${display(result.agenda)} berhasil dicatat.`
     keyword.value = result.agenda
     selectedPositions.value = []
     selectedSender.value = ''
@@ -341,15 +421,29 @@ async function submitCreate(confirmDuplicate = false) {
 }
 
 function openCreate() {
+  if (!confirmDiscard()) return
+  cancelEditing(true)
+  detailRequestId++
+  detail.value = null
   createError.value = ''
   duplicateCandidates.value = []
   createForm.value = { ...emptyCreateForm(), receivedDate: new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date()) }
+  createBaseline.value = { ...createForm.value }
   showCreate.value = true
+  focusSection(createSection)
 }
 
 function switchView(view) {
+  if (activeView.value === view) return true
+  if (!confirmDiscard()) return false
+  detailRequestId++
+  detail.value = null
+  cancelEditing(true)
+  showCreate.value = false
+  createForm.value = emptyCreateForm()
   activeView.value = view
   if (view === 'dashboard') loadDashboard()
+  return true
 }
 
 async function loadDashboard() {
@@ -454,8 +548,13 @@ function handleGlobalShortcut(event) {
 }
 
 function openSearchResults() {
-  switchView('list')
-  nextTick(() => search())
+  if (switchView('list')) nextTick(() => search())
+}
+
+async function openLatestDetail(record) {
+  if (!switchView('list')) return
+  await nextTick()
+  await openDetail(record)
 }
 
 onMounted(() => {
@@ -539,9 +638,10 @@ onUnmounted(() => {
               <section class="dashboard-panel" aria-labelledby="status-chart-title">
                 <h2 id="status-chart-title" class="text-lg font-semibold">Status Tindak Lanjut</h2>
                 <div class="donut-layout mt-5">
-                  <div class="status-donut" :style="donutStyle" role="img" :aria-label="`Status tindak lanjut: ${followupStatuses.map(status => `${status.label} ${status.count}`).join(', ')}`"><div><strong>{{ classifiedTotal }}</strong><span>berstatus</span></div></div>
-                  <dl class="status-legend"><div v-for="status in followupStatuses" :key="status.key"><dt :class="`status-${status.key}`">{{ status.label }}</dt><dd>{{ status.count }}</dd></div></dl>
+                  <div class="status-donut" :style="donutStyle" role="img" :aria-label="`Status tindak lanjut berdasarkan label catatan manual: ${followupStatuses.map(status => `${status.label} ${status.count}`).join(', ')}, tanpa label ${dashboard.unclassifiedStatus || 0}`"><div><strong>{{ classifiedTotal }}</strong><span>berstatus</span></div></div>
+                  <dl class="status-legend"><div v-for="status in followupStatuses" :key="status.key"><dt :class="`status-${status.key}`">{{ status.label }}</dt><dd>{{ status.count }}</dd></div><div><dt>Tanpa label status</dt><dd>{{ dashboard.unclassifiedStatus || 0 }}</dd></div></dl>
                 </div>
+                <p class="chart-note mt-4">Status berasal dari label manual pada keterangan tindak lanjut; bukan verifikasi selesai atau perhitungan tenggat otomatis.</p>
               </section>
               <section class="dashboard-panel" aria-labelledby="trend-chart-title">
                 <h2 id="trend-chart-title" class="text-lg font-semibold">Tren surat</h2>
@@ -571,8 +671,8 @@ onUnmounted(() => {
                 <p v-if="!dashboard.latest?.length" class="empty-state mt-3 text-sm text-slate-700">Belum ada surat dalam daftar terbaru.</p>
                 <div v-else class="latest-scroll mt-4" tabindex="0" role="region" aria-label="Pencatatan terbaru, geser untuk melihat semua kolom">
                   <table class="latest-table">
-                    <thead><tr><th scope="col">Agenda</th><th scope="col">Tanggal Diterima</th><th scope="col">Perihal</th><th scope="col">Asal Surat</th><th scope="col">Unit Tujuan</th></tr></thead>
-                    <tbody><tr v-for="record in dashboard.latest" :key="`${record.rowHint}-${record.agenda}`"><td class="font-semibold tabular-nums">{{ display(record.agenda) }}</td><td>{{ display(record.receivedDate) }}</td><td>{{ display(record.subject) }}</td><td>{{ display(record.sender) }}</td><td>{{ display(record.dispositionTargets) }}</td></tr></tbody>
+                    <thead><tr><th scope="col">Agenda</th><th scope="col">Tanggal diterima</th><th scope="col">Asal surat</th><th scope="col">Perihal</th><th scope="col">Tujuan disposisi</th></tr></thead>
+                    <tbody><tr v-for="record in dashboard.latest" :key="`${record.rowHint}-${record.agenda}`"><th scope="row"><Button variant="ghost" size="sm" class="latest-agenda" :aria-label="`Buka detail agenda ${display(record.agenda)}`" @click="openLatestDetail(record)">{{ display(record.agenda) }}</Button></th><td>{{ display(record.receivedDate) }}</td><td>{{ display(record.sender) }}</td><td>{{ display(record.subject) }}</td><td>{{ display(record.dispositionTargets) }}</td></tr></tbody>
                   </table>
                 </div>
               </section>
@@ -652,58 +752,76 @@ onUnmounted(() => {
             <div class="list-filter-actions"><Button variant="outline" @click="resetSearch">Reset filter</Button><Button variant="outline" :disabled="listLoading" @click="search(false)"><RotateCw class="h-4 w-4" aria-hidden="true" /> Muat ulang</Button></div>
           </div>
 
+          <p v-if="saveNotice" class="mt-4 text-sm text-emerald-800" role="status" aria-live="polite">{{ saveNotice }}</p>
+          <p v-if="!listLoading && !listError && appliedListQuery !== null && !listIsCurrent" class="mt-4 text-sm text-amber-900" role="status">Filter berubah. Tekan Cari atau Muat ulang untuk menampilkan hasil yang sesuai.</p>
           <p v-if="warningCount" class="mt-4 text-sm text-amber-900" role="status">{{ warningCount }} baris dilewati karena data tidak dapat dibaca.</p>
           <p v-if="listError" class="mt-4 text-sm text-red-800" role="alert">{{ listError }}</p>
           <div v-else-if="listLoading" class="mt-6" role="status" aria-label="Memuat daftar surat" aria-live="polite"><p class="text-sm text-slate-700">Memuat daftar surat...</p><div class="skeleton-lines mt-4" aria-hidden="true"><span></span><span></span><span></span></div></div>
-          <p v-else-if="records.length" class="mt-4 text-sm text-slate-700" role="status" aria-live="polite">{{ emptyMessage }}</p>
-          <div v-if="!listLoading && !listError && !records.length" class="empty-state mt-6">
+          <p v-else-if="listIsCurrent && records.length" class="mt-4 text-sm text-slate-700" role="status" aria-live="polite">{{ emptyMessage }}</p>
+          <div v-if="!listLoading && !listError && listIsCurrent && !records.length" class="empty-state mt-6">
             <Search class="h-6 w-6" aria-hidden="true" />
             <p class="mt-3 font-semibold">Tidak ada surat ditemukan</p>
             <p class="mt-1 max-w-prose text-sm text-slate-700">Ubah kata kunci atau filter, lalu coba kembali.</p>
             <Button v-if="keyword || selectedPositions.length || selectedSender || selectedTargets.length" variant="outline" class="mt-4" @click="resetSearch">Reset filter</Button>
           </div>
 
-          <div v-if="records.length" class="report-scroll list-register-scroll mt-4" tabindex="0" role="region" aria-label="Daftar surat masuk 14 kolom, geser untuk melihat semua kolom">
+          <div v-if="!listLoading && !listError && listIsCurrent && records.length" class="report-scroll list-register-scroll mt-4" tabindex="0" role="region" aria-label="Daftar surat masuk">
             <table class="report-table list-register-table">
-              <thead><tr><th v-for="[key, label] in reportColumns" :key="key" scope="col">{{ label }}</th><th scope="col">Aksi</th></tr></thead>
+              <thead><tr><th scope="col">Nomor agenda</th><th scope="col">Aksi</th><th scope="col">Tanggal surat</th><th scope="col">Asal surat</th><th scope="col">Perihal</th><th scope="col">Tujuan disposisi</th></tr></thead>
               <tbody><tr v-for="record in records" :key="`${record.rowHint}-${record.agenda}`">
-                <td v-for="[key] in reportColumns" :key="key" :class="{ 'font-semibold tabular-nums': key === 'agenda' }">{{ display(record[key]) }}</td>
-                <td><div class="list-row-actions"><Button variant="outline" size="sm" @click="openDetail(record)">Lihat</Button><Button v-if="role === 'WRITE'" size="sm" @click="openEdit(record)">Edit</Button></div></td>
+                <th scope="row" class="font-semibold tabular-nums">{{ display(record.agenda) }}</th>
+                <td><div class="list-row-actions"><Button variant="outline" size="sm" :aria-label="`Lihat agenda ${display(record.agenda)}`" @click="openDetail(record)">Lihat</Button><Button v-if="role === 'WRITE'" size="sm" :aria-label="`Edit agenda ${display(record.agenda)}`" @click="openEdit(record)">Edit</Button></div></td>
+                <td>{{ display(record.letterDate) }}</td>
+                <td>{{ display(record.sender) }}</td>
+                <td>{{ display(record.subject) }}</td>
+                <td>{{ display(record.dispositionTargets) }}</td>
               </tr></tbody>
             </table>
           </div>
 
-          <nav v-if="total > 0" class="list-pagination mt-6" aria-label="Paginasi daftar surat">
+          <nav v-if="!listLoading && !listError && listIsCurrent && total > 0" class="list-pagination mt-6" aria-label="Paginasi daftar surat">
             <p class="pagination-summary" role="status">Menampilkan {{ (page - 1) * pageSize + 1 }}-{{ Math.min(page * pageSize, total) }} dari {{ total }} surat</p>
             <div class="pagination-controls">
               <label class="page-size-control">Baris per halaman<select :value="pageSize" aria-label="Jumlah baris per halaman" @change="changePageSize"><option :value="10">10</option><option :value="50">50</option><option :value="100">100</option></select></label>
               <div class="page-buttons">
-                <Button variant="outline" class="page-step" :disabled="page <= 1 || listLoading" aria-label="Halaman sebelumnya" @click="page--; search(false)"><ChevronLeft class="h-4 w-4" aria-hidden="true" /></Button>
-                <Button v-for="pageNumber in pageNumbers" :key="pageNumber" variant="ghost" class="page-number" :class="{ 'is-active': page === pageNumber }" :aria-current="page === pageNumber ? 'page' : undefined" :disabled="listLoading" @click="page = pageNumber; search(false)">{{ pageNumber }}</Button>
-                <Button variant="outline" class="page-step" :disabled="page >= pageCount || listLoading" aria-label="Halaman berikutnya" @click="page++; search(false)"><ChevronRight class="h-4 w-4" aria-hidden="true" /></Button>
+                <Button variant="outline" class="page-step" :disabled="page <= 1 || listLoading" aria-label="Halaman sebelumnya" @click="goToPage(page - 1)"><ChevronLeft class="h-4 w-4" aria-hidden="true" /></Button>
+                <Button v-for="pageNumber in pageNumbers" :key="pageNumber" variant="ghost" class="page-number" :class="{ 'is-active': page === pageNumber }" :aria-current="page === pageNumber ? 'page' : undefined" :disabled="listLoading" @click="goToPage(pageNumber)">{{ pageNumber }}</Button>
+                <Button variant="outline" class="page-step" :disabled="page >= pageCount || listLoading" aria-label="Halaman berikutnya" @click="goToPage(page + 1)"><ChevronRight class="h-4 w-4" aria-hidden="true" /></Button>
               </div>
             </div>
           </nav>
         </section>
 
-        <section v-if="activeView === 'list' && showCreate" class="workspace-panel page-create mt-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-6" aria-labelledby="create-title">
+        <section v-if="activeView === 'list' && showCreate" ref="createSection" tabindex="-1" class="workspace-panel page-create mt-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-6" aria-labelledby="create-title">
           <div class="flex items-start justify-between gap-4">
             <div><h2 id="create-title" class="text-xl font-semibold">Pencatatan surat baru</h2><p class="mt-1 text-sm text-slate-700">Nomor agenda dibuat otomatis saat disimpan.</p></div>
-            <Button variant="ghost" size="icon" aria-label="Tutup formulir" :disabled="createBusy" @click="showCreate = false"><X class="h-5 w-5" aria-hidden="true" /></Button>
+            <Button variant="ghost" size="icon" aria-label="Tutup formulir" :disabled="createBusy" @click="closeCreate"><X class="h-5 w-5" aria-hidden="true" /></Button>
           </div>
-          <form class="mt-5 grid gap-4 sm:grid-cols-2" @submit.prevent="submitCreate()">
+          <form class="record-form mt-5" @submit.prevent="submitCreate()">
+            <fieldset class="record-fields">
+              <legend>Identitas surat</legend>
             <label class="grid gap-1 text-sm font-medium">Tanggal diterima *<Input v-model="createForm.receivedDate" type="date" required /></label>
             <label class="grid gap-1 text-sm font-medium">Nomor surat *<Input v-model="createForm.letterNumber" maxlength="500" required /></label>
             <label class="grid gap-1 text-sm font-medium">Tanggal surat<Input v-model="createForm.letterDate" type="date" /></label>
             <label class="grid gap-1 text-sm font-medium">Asal surat *<Input v-model="createForm.sender" maxlength="500" required /></label>
             <label class="grid gap-1 text-sm font-medium sm:col-span-2">Perihal *<Input v-model="createForm.subject" maxlength="500" required /></label>
+            </fieldset>
+            <fieldset class="record-fields">
+              <legend>Disposisi</legend>
             <label class="grid gap-1 text-sm font-medium sm:col-span-2">Isi disposisi<Textarea v-model="createForm.disposition" maxlength="5000" rows="3" class="rounded-md border border-border px-3 py-2 focus-visible:ring-2 focus-visible:ring-primary" /></label>
             <label class="grid gap-1 text-sm font-medium">Tujuan disposisi<Textarea v-model="createForm.dispositionTargets" maxlength="5000" rows="3" class="rounded-md border border-border px-3 py-2 focus-visible:ring-2 focus-visible:ring-primary" /></label>
             <label class="grid gap-1 text-sm font-medium">Keterangan / tanggal paraf<Input v-model="createForm.parafDateOrNote" maxlength="5000" /></label>
-            <label class="grid gap-1 text-sm font-medium">Tautan berkas surat<Input v-model="createForm.letterFileReference" type="url" maxlength="2000" placeholder="https://..." /></label>
-            <div class="grid gap-1 text-sm font-medium"><label for="create-position">Posisi surat</label><div class="flex items-center gap-2"><Select v-model="createForm.letterPosition"><SelectTrigger id="create-position" class="min-h-11 flex-1"><SelectValue placeholder="Belum diisi" /></SelectTrigger><SelectContent><SelectItem v-for="option in allPositions.filter(value => value)" :key="option" :value="option">{{ option }}</SelectItem></SelectContent></Select><Button type="button" variant="ghost" size="sm" :disabled="!createForm.letterPosition" @click="createForm.letterPosition = ''">Kosongkan</Button></div></div>
+            </fieldset>
+            <fieldset class="record-fields">
+              <legend>Posisi dan tindak lanjut</legend>
+            <div class="record-field grid gap-1 text-sm font-medium"><label for="create-position">Posisi surat</label><div class="flex items-center gap-2"><Select v-model="createForm.letterPosition"><SelectTrigger id="create-position" class="min-h-11 flex-1"><SelectValue placeholder="Belum diisi" /></SelectTrigger><SelectContent><SelectItem v-for="option in allPositions.filter(value => value)" :key="option" :value="option">{{ option }}</SelectItem></SelectContent></Select><Button type="button" variant="ghost" size="sm" :disabled="!createForm.letterPosition" @click="createForm.letterPosition = ''">Kosongkan</Button></div></div>
             <label class="grid gap-1 text-sm font-medium sm:col-span-2">Keterangan tindak lanjut<Textarea v-model="createForm.followupNote" maxlength="5000" rows="3" class="rounded-md border border-border px-3 py-2 focus-visible:ring-2 focus-visible:ring-primary" /></label>
+            </fieldset>
+            <fieldset class="record-fields">
+              <legend>Berkas</legend>
+            <label class="grid gap-1 text-sm font-medium">Tautan berkas surat<Input v-model="createForm.letterFileReference" type="url" maxlength="2000" placeholder="https://..." /></label>
             <label class="grid gap-1 text-sm font-medium sm:col-span-2">Berkas / catatan tindak lanjut<Input v-model="createForm.followupReference" maxlength="5000" placeholder="URL HTTPS atau catatan" /></label>
+            </fieldset>
             <p v-if="createError" class="text-sm text-red-800 sm:col-span-2" role="alert">{{ createError }}</p>
             <div v-if="duplicateCandidates.length" class="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm sm:col-span-2">
               <p class="font-semibold">Periksa kemungkinan duplikat sebelum melanjutkan.</p>
@@ -712,34 +830,37 @@ onUnmounted(() => {
             <div class="flex flex-wrap gap-2 sm:col-span-2">
               <Button type="submit" :disabled="createBusy">{{ createBusy ? 'Menyimpan...' : 'Simpan surat' }}</Button>
               <Button v-if="duplicateCandidates.length" type="button" variant="outline" :disabled="createBusy" @click="submitCreate(true)">Tetap catat</Button>
-              <Button type="button" variant="ghost" :disabled="createBusy" @click="showCreate = false">Batal</Button>
+              <Button type="button" variant="ghost" :disabled="createBusy" @click="closeCreate">Batal</Button>
             </div>
           </form>
         </section>
 
-        <section v-if="activeView === 'list' && detail" class="workspace-panel page-detail mt-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-6" aria-labelledby="detail-title">
+        <section v-if="activeView === 'list' && detail" ref="detailSection" tabindex="-1" class="workspace-panel page-detail mt-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-6" aria-labelledby="detail-title">
           <div class="flex items-start justify-between gap-4">
             <div class="min-w-0"><h2 id="detail-title" class="break-words text-xl font-semibold">{{ detailLoading ? 'Memuat detail...' : display(detail.subject) }}</h2><p class="mt-1 text-sm text-slate-700">Nomor agenda: {{ display(detail.agenda) }}</p></div>
-            <div class="flex gap-2">
+            <div class="detail-actions flex flex-wrap justify-end gap-2">
               <Button v-if="role === 'WRITE' && !editingDetail && !detailLoading" variant="outline" @click="startEditing('full')">Edit</Button>
               <Button v-if="role === 'WRITE' && !editingDetail && !detailLoading" variant="ghost" @click="startEditing('quick')">Perbarui disposisi / tindak lanjut</Button>
-              <Button variant="ghost" size="icon" aria-label="Tutup detail" @click="detail = null; cancelEditing()"><X class="h-5 w-5" aria-hidden="true" /></Button>
+              <Button variant="ghost" size="icon" aria-label="Tutup detail" :disabled="editBusy" @click="closeDetail"><X class="h-5 w-5" aria-hidden="true" /></Button>
             </div>
           </div>
           <p v-if="detailError" class="mt-4 text-sm text-red-800" role="alert">{{ detailError }}</p>
-          <form v-if="editingDetail && !detailLoading" class="mt-5 grid gap-4 sm:grid-cols-2" @submit.prevent="submitEdit">
-            <div v-for="[key, label] in (editMode === 'quick' ? fields.filter(([key]) => ['disposition', 'dispositionTargets', 'parafDateOrNote', 'letterPosition', 'followupNote'].includes(key)) : fields.filter(([key]) => key !== 'documentDescription').concat([['letterFileReference', 'Tautan berkas surat'], ['followupReference', 'Berkas / catatan tindak lanjut']]))" :key="key" class="grid min-w-0 gap-1 text-sm font-semibold text-slate-800">
-              <label :for="`edit-${key}`">{{ label }}</label>
+          <form v-if="editingDetail && !detailLoading" class="record-form mt-5" @submit.prevent="submitEdit">
+            <fieldset v-for="group in editGroups.filter(group => editMode === 'full' || ['Disposisi', 'Posisi dan tindak lanjut'].includes(group.title))" :key="group.title" class="record-fields">
+              <legend>{{ group.title }}</legend>
+            <div v-for="key in group.keys" :key="key" class="record-field grid min-w-0 gap-1 text-sm font-semibold text-slate-800">
+              <label :for="`edit-${key}`">{{ editLabels[key] }}</label>
               <Textarea v-if="['disposition', 'dispositionTargets', 'followupNote'].includes(key)" :id="`edit-${key}`" v-model="editForm[key]" maxlength="5000" rows="3" class="rounded-md border border-border px-3 py-2 font-normal focus-visible:ring-2 focus-visible:ring-primary" />
               <Input v-else-if="key === 'receivedDate' || key === 'letterDate'" :id="`edit-${key}`" v-model="editForm[key]" type="date" :required="key === 'receivedDate'" />
               <div v-else-if="key === 'letterPosition'" class="flex items-center gap-2 font-normal"><Select v-model="editForm[key]"><SelectTrigger :id="`edit-${key}`" class="min-h-11 flex-1"><SelectValue placeholder="Belum diisi" /></SelectTrigger><SelectContent><SelectItem v-if="editForm[key] && !allPositions.includes(editForm[key])" :value="editForm[key]">{{ editForm[key] }} (nilai saat ini)</SelectItem><SelectItem v-for="option in allPositions.filter(value => value)" :key="option" :value="option">{{ option }}</SelectItem></SelectContent></Select><Button type="button" variant="ghost" size="sm" :disabled="!editForm[key]" @click="editForm[key] = ''">Kosongkan</Button></div>
               <Input v-else :id="`edit-${key}`" v-model="editForm[key]" :maxlength="key === 'letterNumber' || key === 'sender' || key === 'subject' ? 500 : 5000" :type="key === 'letterFileReference' ? 'url' : 'text'" />
             </div>
+            </fieldset>
             <label v-if="editMode === 'full' && ['sender', 'letterNumber', 'letterDate', 'subject'].some(key => editForm[key] !== editBaseline[key])" class="flex items-start gap-2 text-sm sm:col-span-2"><input v-model="updateDescription" type="checkbox" class="mt-1"> Perbarui uraian berkas dari identitas surat</label>
             <p v-if="editError" class="text-sm text-red-800 sm:col-span-2" role="alert">{{ editError }}</p>
             <div class="flex flex-wrap gap-2 sm:col-span-2">
               <Button type="submit" :disabled="editBusy">{{ editBusy ? 'Menyimpan...' : 'Simpan perubahan' }}</Button>
-              <Button type="button" variant="ghost" :disabled="editBusy" @click="cancelEditing">Batal</Button>
+              <Button type="button" variant="ghost" :disabled="editBusy" @click="cancelEditing()">Batal</Button>
             </div>
           </form>
           <dl v-else-if="!detailLoading" class="mt-5 grid gap-4 sm:grid-cols-2">
