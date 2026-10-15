@@ -48,9 +48,15 @@ const dashboardLoading = ref(false)
 const dashboardError = ref('')
 const reportKeyword = ref('')
 const reportPositions = ref([])
+const reportSender = ref('')
+const reportTarget = ref('')
+const reportPage = ref(1)
+const reportPageSize = 10
 const fromDate = ref('')
 const toDate = ref('')
 const report = ref(null)
+const reportSenders = ref([])
+const reportTargets = ref([])
 const reportLoading = ref(false)
 const reportError = ref('')
 const includeUrls = ref(false)
@@ -81,9 +87,12 @@ const reportColumns = [
 ]
 const reportQuery = computed(() => ({
   keyword: reportKeyword.value.trim(), positions: [...reportPositions.value],
+  sender: reportSender.value, dispositionTarget: reportTarget.value,
   fromDate: fromDate.value, toDate: toDate.value,
 }))
 const reportIsCurrent = computed(() => report.value && JSON.stringify(reportQuery.value) === report.value.queryKey)
+const reportPageCount = computed(() => Math.max(1, Math.ceil((report.value?.records.length || 0) / reportPageSize)))
+const reportRows = computed(() => report.value?.records.slice((reportPage.value - 1) * reportPageSize, reportPage.value * reportPageSize) || [])
 const followupStatuses = computed(() => [
   { key: 'selesai', label: 'Selesai', count: dashboard.value?.statusCounts?.selesai || 0 },
   { key: 'dalamProses', label: 'Dalam Proses', count: dashboard.value?.statusCounts?.dalamProses || 0 },
@@ -302,6 +311,7 @@ function openCreate() {
 function switchView(view) {
   activeView.value = view
   if (view === 'dashboard') loadDashboard()
+  if (view === 'report' && !report.value && !reportLoading.value) loadReport()
 }
 
 async function loadDashboard() {
@@ -345,6 +355,9 @@ async function loadReport() {
     }
     if (!Array.isArray(result.records)) throw new Error('Format data rekap tidak valid.')
     report.value = { ...result, queryKey: JSON.stringify(query) }
+    reportSenders.value = result.senders || []
+    reportTargets.value = result.targets || []
+    reportPage.value = 1
   } catch (error) {
     if (currentRequest === reportRequestId) reportError.value = 'Rekap gagal dimuat. Coba lagi.'
   } finally {
@@ -416,11 +429,11 @@ onUnmounted(() => clearInterval(clockTimer))
     <header class="app-header app-welcome-header print:hidden">
       <div class="app-header-inner">
         <div class="app-welcome">
-          <p>Selamat datang, <span v-if="role">, {{ role === 'WRITE' ? 'Administrator' : 'Viewer' }}</span><span v-if="email" class="welcome-email">, ( {{ email }} )</span></p>
+          <p>Selamat datang, <span v-if="role"> {{ role === 'WRITE' ? 'Administrator' : 'Viewer' }}</span><span v-if="email" class="welcome-email"> ( {{ email }} )</span></p>
           <blockquote>“Setiap surat tercatat dengan baik, setiap tindak lanjut lebih terarah.”</blockquote>
         </div>
         <div class="app-header-tools">
-          <time class="jakarta-clock" :datetime="new Date().toISOString()" aria-label="Waktu saat ini di WIB"><span class="clock-label">Waktu saat ini</span><strong>{{ jakartaClock }}</strong><span class="clock-zone">WIB</span></time>
+          <time class="jakarta-clock" :datetime="new Date().toISOString()" aria-label="Waktu saat ini di WIB"><strong>{{ jakartaClock }}</strong><span class="clock-zone">WIB</span></time>
           <div v-if="role" class="app-account" :aria-label="`${role === 'WRITE' ? 'Administrator' : 'Viewer'}${email ? `, ${email}` : ''}`">
             <span class="account-avatar" aria-hidden="true"><UserRound /></span>
           </div>
@@ -512,6 +525,8 @@ onUnmounted(() => clearInterval(clockTimer))
               <label class="grid gap-1 text-sm font-medium">Dari tanggal<Input v-model="fromDate" type="date" :max="toDate || undefined" /></label>
               <label class="grid gap-1 text-sm font-medium">Sampai tanggal<Input v-model="toDate" type="date" :min="fromDate || undefined" /></label>
               <label class="grid gap-1 text-sm font-medium sm:col-span-2">Posisi surat (pilih beberapa; kosong berarti tanpa hasil)<MultiSelect v-model="reportPositions" :options="positionOptions" aria-label="Filter posisi rekap" /></label>
+              <label class="grid gap-1 text-sm font-medium">Asal Surat<select v-model="reportSender" class="report-filter-select"><option value="">Semua asal surat</option><option v-for="sender in reportSenders" :key="sender" :value="sender">{{ sender }}</option></select></label>
+              <label class="grid gap-1 text-sm font-medium">Tujuan Dispo<select v-model="reportTarget" class="report-filter-select"><option value="">Semua tujuan dispo</option><option v-for="target in reportTargets" :key="target" :value="target">{{ target }}</option></select></label>
               <div class="flex flex-wrap items-center gap-3 sm:col-span-2"><Button type="submit" :disabled="reportLoading">{{ reportLoading ? 'Memuat...' : 'Tampilkan rekap' }}</Button><p class="text-sm text-slate-700">Kata kunci boleh kosong untuk semua surat pada posisi terpilih.</p></div>
             </form>
             <p v-if="reportError" class="mt-4 text-sm text-red-800" role="alert">{{ reportError }}</p>
@@ -529,16 +544,27 @@ onUnmounted(() => clearInterval(clockTimer))
             <div class="report-print-heading">
               <h2>Rekap surat masuk</h2>
               <p>Dibuat {{ report.generatedAt || '—' }} WIB · {{ report.total }} surat</p>
-              <p>Filter: {{ report.filters?.keyword || 'Semua kata kunci' }} · {{ report.filters?.fromDate || 'Awal' }} sampai {{ report.filters?.toDate || 'Akhir' }} · Posisi: {{ report.filters?.positions?.map(formatPosition).join(', ') || 'Tidak ada' }}</p>
+              <p>Filter: {{ report.filters?.keyword || 'Semua kata kunci' }} · {{ report.filters?.fromDate || 'Awal' }} sampai {{ report.filters?.toDate || 'Akhir' }} · Posisi: {{ report.filters?.positions?.map(formatPosition).join(', ') || 'Tidak ada' }} · Asal: {{ report.filters?.sender || 'Semua' }} · Tujuan: {{ report.filters?.dispositionTarget || 'Semua' }}</p>
             </div>
             <p class="mt-5 text-sm text-slate-700" role="status">{{ report.total }} surat dalam rekap. <span v-if="report.unreadableDates">{{ report.unreadableDates }} tanggal tak terbaca tidak masuk periode.</span><span v-if="report.warningCount"> {{ report.warningCount }} baris dilewati karena data tidak dapat dibaca.</span></p>
-            <div v-if="report.records.length" class="report-scroll mt-4" tabindex="0" role="region" aria-label="Pratinjau rekap 14 kolom, geser untuk melihat semua kolom">
+            <div v-if="report.records.length" class="report-scroll report-screen-table mt-4" tabindex="0" role="region" aria-label="Pratinjau rekap 14 kolom, geser untuk melihat semua kolom">
+              <table class="report-table">
+                <thead><tr><th v-for="[key, label] in reportColumns" :key="key" scope="col">{{ label }}</th></tr></thead>
+                <tbody><tr v-for="record in reportRows" :key="`${record.rowHint}-${record.agenda}`"><td v-for="[key] in reportColumns" :key="key">{{ display(record[key]) }}</td></tr></tbody>
+              </table>
+            </div>
+            <nav v-if="report.records.length > reportPageSize" class="report-pagination mt-4 flex flex-wrap items-center justify-between gap-3 print:hidden" aria-label="Paginasi rekap surat">
+              <Button variant="outline" :disabled="reportPage === 1" @click="reportPage--"><ChevronLeft class="h-4 w-4" aria-hidden="true" /> Sebelumnya</Button>
+              <span class="text-sm text-slate-700">Halaman {{ reportPage }} dari {{ reportPageCount }}</span>
+              <Button variant="outline" :disabled="reportPage === reportPageCount" @click="reportPage++">Berikutnya <ChevronRight class="h-4 w-4" aria-hidden="true" /></Button>
+            </nav>
+            <div v-if="report.records.length" class="report-scroll report-print-table" aria-hidden="true">
               <table class="report-table">
                 <thead><tr><th v-for="[key, label] in reportColumns" :key="key" scope="col">{{ label }}</th></tr></thead>
                 <tbody><tr v-for="record in report.records" :key="`${record.rowHint}-${record.agenda}`"><td v-for="[key] in reportColumns" :key="key">{{ display(record[key]) }}</td></tr></tbody>
               </table>
             </div>
-            <div v-else class="empty-state mt-5"><p class="font-semibold">Rekap kosong</p><p class="mt-1 text-sm text-slate-700">Ubah periode atau posisi surat, lalu tampilkan rekap lagi.</p></div>
+            <div v-if="!report.records.length" class="empty-state mt-5"><p class="font-semibold">Rekap kosong</p><p class="mt-1 text-sm text-slate-700">Ubah periode atau posisi surat, lalu tampilkan rekap lagi.</p></div>
           </template>
         </section>
 

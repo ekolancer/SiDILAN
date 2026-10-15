@@ -124,9 +124,9 @@ Hak akses berkas tetap mengikuti Google Drive. Jika akun tidak memiliki izin ber
 
 ## 8. Rekap
 
-Pengguna memilih periode dan posisi, lalu melihat preview register 14 kolom. Header memuat nama aplikasi/unit, filter dan waktu pembuatan.
+Saat menu dibuka, seluruh surat langsung dimuat tanpa kata kunci. Preview register 14 kolom menampilkan 10 baris per halaman. Filter mencakup kata kunci, periode, posisi, Asal Surat dan Tujuan Dispo; dua filter terakhir berupa dropdown nilai aktual dari seluruh register. Tujuan gabungan dipisah pada koma/titik koma menjadi opsi masing-masing. Header memuat nama aplikasi/unit, filter dan waktu pembuatan.
 
-Cetak menggunakan layout landscape, header tabel berulang dan gaya hitam-putih yang tetap terbaca. CSV menggunakan data sesuai filter. Tautan berkas menjadi opsi ekspor, tidak disisipkan tanpa pilihan pengguna.
+Cetak menggunakan layout landscape, header tabel berulang dan gaya hitam-putih yang tetap terbaca. Cetak dan CSV memakai seluruh hasil filter, bukan hanya halaman pratinjau aktif. Tautan berkas menjadi opsi ekspor, tidak disisipkan tanpa pilihan pengguna.
 
 Tanggal yang tidak dapat dibaca muncul dengan nilai asli. Untuk laporan periode, jumlah tanggal yang belum dapat dimasukkan ke periode disebutkan. Baris template tidak ikut laporan.
 

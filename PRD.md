@@ -135,7 +135,7 @@ Tidak ada pengajuan penutupan, buka kembali surat, tahapan wajib, atau antrean r
 
 Filter periode menggunakan tanggal diterima. Tanggal yang tidak dapat dipahami tidak ditebak dan disebutkan jumlahnya pada rekap periode. Total pencatatan tetap dapat dihitung tanpa tanggal. Jika variasi label posisi ingin digabung pada grafik, tampilkan aturan penggabungan dan biarkan nilai sumber tetap utuh.
 
-Rekap cetak/CSV mempertahankan arti 14 kolom. URL berkas hanya diekspor bila pengguna memilihnya; teks yang menyerupai formula diekspor secara aman.
+Rekap menampilkan seluruh surat saat dibuka, dengan 10 baris per halaman pratinjau. Filter Asal Surat dan Tujuan Dispo berasal dari nilai register; tujuan gabungan dipisah pada koma/titik koma. Rekap cetak/CSV tetap memuat seluruh hasil filter dan mempertahankan arti 14 kolom. URL berkas hanya diekspor bila pengguna memilihnya; teks yang menyerupai formula diekspor secara aman.
 
 ## 10. Kriteria penerimaan
 

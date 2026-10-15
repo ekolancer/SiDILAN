@@ -410,7 +410,9 @@ function getIncomingReport(query) {
     const { config } = requireRole_('READ');
     const filter = validateReportQuery_(query);
     const register = readRegister_(config);
-    const matched = register.records.filter(record => matchesRegisterFilter_(record, filter.keyword, filter.positions));
+    const matched = register.records.filter(record => matchesRegisterFilter_(record, filter.keyword, filter.positions) &&
+      (!filter.sender || record.sender === filter.sender) &&
+      (!filter.dispositionTarget || String(record.dispositionTargets || '').split(/[,;]/).some(target => target.trim() === filter.dispositionTarget)));
     const unreadableDates = filter.fromDate || filter.toDate
       ? matched.filter(record => !record.receivedDateKey).length : 0;
     const records = matched.filter(record => {
@@ -421,10 +423,12 @@ function getIncomingReport(query) {
     });
     return {
       success: true, records, total: records.length, unreadableDates,
+      senders: [...new Set(register.records.map(record => record.sender).filter(value => !isPlaceholder_(value)))].sort((a, b) => a.localeCompare(b, 'id')),
+      targets: [...new Set(register.records.flatMap(record => String(record.dispositionTargets || '').split(/[,;]/).map(value => value.trim()).filter(value => !isPlaceholder_(value))))].sort((a, b) => a.localeCompare(b, 'id')),
       warningCount: register.warningCount,
       generatedAt: Utilities.formatDate(new Date(), 'Asia/Jakarta', "yyyy-MM-dd'T'HH:mm:ss"),
       filters: { keyword: filter.rawKeyword, positions: filter.positions ? [...filter.positions] : null,
-        fromDate: filter.fromDate, toDate: filter.toDate }
+        sender: filter.sender, dispositionTarget: filter.dispositionTarget, fromDate: filter.fromDate, toDate: filter.toDate }
     };
   } catch (error) {
     return { success: false, ...safeError_(error) };
@@ -449,8 +453,12 @@ function validateReportQuery_(query) {
   const positions = query.positions;
   if (positions !== undefined && (!Array.isArray(positions) || positions.length > 100 ||
       positions.some(value => typeof value !== 'string'))) throw new Error('VALIDATION_ERROR');
+  const sender = query.sender === undefined ? '' : query.sender;
+  const dispositionTarget = query.dispositionTarget === undefined ? '' : query.dispositionTarget;
+  if (typeof sender !== 'string' || sender.length > 5000 ||
+      typeof dispositionTarget !== 'string' || dispositionTarget.length > 5000) throw new Error('VALIDATION_ERROR');
   return { rawKeyword: rawKeyword.trim(), keyword: rawKeyword.trim().toLocaleLowerCase(),
-    positions: positions === undefined ? null : new Set(positions), fromDate, toDate };
+    positions: positions === undefined ? null : new Set(positions), sender: sender.trim(), dispositionTarget: dispositionTarget.trim(), fromDate, toDate };
 }
 
 function updateSuratMasuk(payload) {
