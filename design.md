@@ -80,7 +80,7 @@ Pada mobile, kartu menampilkan agenda, perihal, asal, tanggal dan posisi. Pagina
 
 ## 6. Form tambah dan edit
 
-Form berupa halaman/panel lebar dengan empat bagian:
+Form tambah dan edit terbuka sebagai dialog terfokus dengan empat bagian dalam satu kolom vertikal. Tiap bagian memberi petunjuk singkat tentang informasi yang diisi atau dilihat berikutnya. Konten dialog dapat digulir sendiri pada layar pendek, sementara tombol simpan dan batal tetap mudah dijangkau. Dialog menutup melalui tombol yang jelas, Escape, atau klik luar; jika draf berubah, konfirmasi pembuangan tetap berlaku.
 
 | Bagian | Field |
 | --- | --- |

@@ -8,3 +8,14 @@ export function callAppsScript(functionName, ...args) {
     runner.withSuccessHandler(resolve).withFailureHandler(reject)[functionName](...args)
   })
 }
+
+export const letterApi = {
+  getAppStatus: () => callAppsScript('getAppStatus'),
+  getInitialData: () => callAppsScript('getInitialData'),
+  getSuratMasuk: query => callAppsScript('getSuratMasuk', query),
+  getSuratDetail: query => callAppsScript('getSuratDetail', query),
+  updateSuratMasuk: change => callAppsScript('updateSuratMasuk', change),
+  createSuratMasuk: letter => callAppsScript('createSuratMasuk', letter),
+  getDashboardStats: () => callAppsScript('getDashboardStats'),
+  getIncomingReport: query => callAppsScript('getIncomingReport', query),
+}

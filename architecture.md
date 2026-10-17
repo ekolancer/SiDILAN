@@ -181,10 +181,12 @@ Struktur frontend yang disepakati:
 | File / direktori | Isi |
 | --- | --- |
 | `src/main.js` | Inisialisasi Vue dan mount aplikasi |
-| `src/App.vue` | Shell UI dan navigasi |
-| `src/components/` | Komponen daftar, detail, form, dashboard dan rekap |
-| `src/services/appsScript.js` | Wrapper Promise untuk `google.script.run` |
-| `src/styles/` | CSS aplikasi dan responsif |
+| `src/App.vue` | Shell UI, navigasi dan koordinasi inisialisasi antarfitur |
+| `src/components/views/` | Tampilan dashboard, daftar, detail, form dan rekap; menerima model reaktif dari composable |
+| `src/composables/` | State dan alur terpisah untuk surat, dashboard dan rekap |
+| `src/lib/letterFields.js` | Definisi kolom register, grup field dan format tampilan bersama |
+| `src/services/appsScript.js` | Wrapper Promise dan API bernama untuk `google.script.run` |
+| `src/style.css` | Token, CSS aplikasi, responsif dan cetak |
 | `Code.js` | `doGet` serta fungsi publik/internal Apps Script |
 | `Index.html` | Shell HTML Service hasil build Vite; bukan sumber UI yang diedit manual |
 | `vite.config.js` | Build satu entry HTML dan pengaturan aset kompatibel HTML Service |
