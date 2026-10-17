@@ -33,7 +33,7 @@ Menu Disposisi, Penugasan, Tugas Saya, Review, Arsip, Surat Keluar dan WhatsApp 
 | Peran warna | Ungu untuk aksi utama dan seri data masuk, sian untuk data keluar dan sorotan nonsemantik. Hijau/amber/merah tetap menyatakan status selesai/proses/terlambat atau error; jangan mengubah arti warna status |
 | Warna merek | Ungu `#7152AD`, lavender pucat `#F1ECF9`, sian pucat `#E5F5F8` |
 | Teks | Utama `#24243B`, sekunder `#55576B` |
-| Tipografi | Outfit lokal dengan fallback sistem; body 14–16 px; judul responsif 25–32 px; angka tabular |
+| Tipografi | Outfit lokal dengan fallback sistem; body 16 px / leading 1.5; judul halaman 28–32 px / 700; judul bagian 18 px / 600; judul dialog 20 px / 700; label 15 px / 500; metadata 13 px / 400; angka tabular. Font weight dibatasi pada aset lokal 400–700 |
 | Input/tombol | Tinggi 40–44 px; label jelas; radius mengikuti hierarki komponen |
 | Panel | Radius sekitar 12 px; jarak 16–24 px; dekorasi terbatas |
 
