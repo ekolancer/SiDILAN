@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && node scripts/copy-build.js",
-    "test": "node tests/read-contract.test.js && node tests/edit-contract.test.js && node tests/template-selection.test.js && node tests/report-contract.test.js && node tests/csv-contract.test.js && node tests/manifest-contract.test.js && node tests/frontend-modules.test.mjs && node tests/server-contract.test.cjs",
+    "test": "node tests/read-contract.test.js && node tests/performance-contract.test.cjs && node tests/edit-contract.test.js && node tests/template-selection.test.js && node tests/report-contract.test.js && node tests/csv-contract.test.js && node tests/manifest-contract.test.js && node tests/frontend-modules.test.mjs && node tests/server-contract.test.cjs",
     "test:build": "npm run build && node scripts/build-contract.test.js"
   },
   "repository": {

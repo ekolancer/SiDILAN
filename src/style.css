@@ -461,9 +461,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .letter-dialog-scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 1.25rem 1.5rem 1.5rem; }
   form.record-form.letter-dialog-form { display: flex; flex-direction: column; gap: 1.5rem; }
   .letter-dialog-form > :is(fieldset, .letter-dialog-actions, [role="alert"]) { width: 100%; }
-  .letter-dialog-form .record-fields { grid-template-columns: minmax(0, 1fr); gap: .75rem; padding-top: 1rem; }
-  .letter-dialog-form .record-fields > :is(label, .record-field, .form-group-guidance) { grid-column: 1 / -1; width: 100%; }
-  .letter-dialog-form .record-fields > :is(label, .record-field) { padding: .6rem; }
+  .letter-dialog-form .record-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem 1rem; padding-top: 1rem; }
+  .letter-dialog-form .record-fields > .form-group-guidance,
+  .letter-dialog-form .record-fields > .record-field:has(textarea),
+  .letter-dialog-form .record-fields > .record-field:has(input[type="url"]) { grid-column: 1 / -1; }
+  .letter-dialog-form .record-fields > :is(label, .record-field) { min-width: 0; padding: .6rem; }
   .form-group-guidance { grid-column: 1; max-width: 68ch; margin: -.35rem 0 .15rem; color: #626378; font-size: var(--type-meta); line-height: 1.5; }
   .letter-detail-group .form-group-guidance { margin: -.35rem 0 .8rem; }
   .letter-dialog-form :is(input, textarea, [data-slot="select-trigger"]) { width: 100%; }
@@ -522,6 +524,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .letter-dialog-scroll { padding: 1rem 1rem 1.25rem; }
   .letter-dialog-actions { bottom: -1.25rem; margin: .25rem -1rem -1.25rem; padding: .75rem 1rem; }
   .letter-dialog-actions > button { flex: 1 1 auto; }
+  .letter-dialog-form .record-fields { grid-template-columns: minmax(0, 1fr); }
+  .letter-dialog-form .record-fields > :is(.record-field:has(textarea), .record-field:has(input[type="url"])) { grid-column: auto; }
   .letter-detail-fields { grid-template-columns: minmax(0, 1fr); }
   .letter-detail-groups { gap: 1.25rem; }
   .dashboard-charts { grid-template-columns: minmax(0, 1fr); }

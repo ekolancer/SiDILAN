@@ -30,15 +30,16 @@ async function loadInitial() {
   loadingStatus.value = true
   statusError.value = ''
   try {
-    const result = await letterApi.getAppStatus()
+    const result = await letterApi.getStartupData({ page: 1, pageSize: letters.pageSize.value, keyword: '' })
     if (!result?.success) {
       statusError.value = result?.message || 'Akses tidak dapat diverifikasi.'
       return
     }
-    email.value = result.email
-    role.value = result.role
-    await loadPositions()
-    await Promise.all([dashboardState.loadDashboard(), letters.search()])
+    email.value = result.initialData.email
+    role.value = result.initialData.role
+    applyPositions(result.initialData)
+    letters.setList(result.list)
+    dashboardState.setDashboard(result.dashboard)
   } catch (error) {
     statusError.value = error.message === 'APPS_SCRIPT_UNAVAILABLE'
       ? 'Aplikasi harus dibuka melalui deployment Google Apps Script.'
@@ -48,23 +49,14 @@ async function loadInitial() {
   }
 }
 
-async function loadPositions() {
-  try {
-    const result = await letterApi.getInitialData()
-    if (!result?.success) {
-      letters.listError.value = result?.message || 'Data awal tidak dapat dimuat.'
-      return
-    }
-    letters.allPositions.value = result.positions || []
-    letters.allSenders.value = result.senders || []
-    letters.allTargets.value = result.targets || []
-    reportState.reportPositions.value = [...letters.allPositions.value]
-    reportState.reportSenders.value = letters.allSenders.value
-    reportState.reportTargets.value = letters.allTargets.value
-    letters.warningCount.value = result.warningCount || 0
-  } catch (error) {
-    letters.listError.value = 'Data awal gagal dimuat. Periksa koneksi dan izin spreadsheet.'
-  }
+function applyPositions(result) {
+  letters.allPositions.value = result.positions || []
+  letters.allSenders.value = result.senders || []
+  letters.allTargets.value = result.targets || []
+  reportState.reportPositions.value = [...letters.allPositions.value]
+  reportState.reportSenders.value = letters.allSenders.value
+  reportState.reportTargets.value = letters.allTargets.value
+  letters.warningCount.value = result.warningCount || 0
 }
 
 function switchView(view) {

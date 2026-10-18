@@ -9,12 +9,34 @@ const SidilanIncomingRead = (() => {
     }
   }
 
+  function initialData_(register, email, role) {
+    const options = SidilanFilters.collectReportOptions_(register.records);
+    return { success: true, email, role, positions: SidilanRepository.collectPositions_(register.sheet, register.records), ...options, warningCount: register.warningCount };
+  }
+
   function getInitialData() {
     try {
       const { config, email, role } = SidilanAuth.requireRole_('READ');
+      return initialData_(SidilanRepository.readRegister_(config), email, role);
+    } catch (error) {
+      return { success: false, ...SidilanErrors.safeError_(error) };
+    }
+  }
+
+  function getStartupData(query) {
+    try {
+      const { config, email, role } = SidilanAuth.requireRole_('READ');
+      const filter = validateListQuery_(query);
       const register = SidilanRepository.readRegister_(config);
-      const options = SidilanFilters.collectReportOptions_(register.records);
-      return { success: true, email, role, positions: SidilanRepository.collectPositions_(register.sheet, register.records), ...options, warningCount: register.warningCount };
+      const initialData = initialData_(register, email, role);
+      const list = list_(filter, register, initialData);
+      let dashboard;
+      try {
+        dashboard = SidilanReports.dashboardStats_(register);
+      } catch (error) {
+        dashboard = { success: false, ...SidilanErrors.safeError_(error) };
+      }
+      return { success: true, initialData, list, dashboard };
     } catch (error) {
       return { success: false, ...SidilanErrors.safeError_(error) };
     }
@@ -23,45 +45,53 @@ const SidilanIncomingRead = (() => {
   function getSuratMasuk(query) {
     try {
       const { config } = SidilanAuth.requireRole_('READ');
-      if (!query || typeof query !== 'object' || Array.isArray(query)) throw new Error('VALIDATION_ERROR');
-      const rawKeyword = query.keyword === undefined ? '' : query.keyword;
-      if (typeof rawKeyword !== 'string' || rawKeyword.length > 200) throw new Error('VALIDATION_ERROR');
-      const keyword = rawKeyword.trim();
-
-      const selectedPositions = query && query.positions;
-      if (selectedPositions !== undefined && (!Array.isArray(selectedPositions) || selectedPositions.length > 100 || selectedPositions.some(value => typeof value !== 'string'))) {
-        throw new Error('VALIDATION_ERROR');
-      }
-      const sender = query.sender === undefined ? '' : query.sender;
-      const dispositionTargets = query.dispositionTargets === undefined ? [] : query.dispositionTargets;
-      if (typeof sender !== 'string' || sender.length > 5000 || !Array.isArray(dispositionTargets) || dispositionTargets.length > 100 || dispositionTargets.some(value => typeof value !== 'string' || value.length > 500)) throw new Error('VALIDATION_ERROR');
-      const selectedTargets = new Set(dispositionTargets);
-      const pageValue = query.page === undefined ? 1 : Number(query.page);
-      if (!Number.isFinite(pageValue) || pageValue < 1 || !Number.isInteger(pageValue)) throw new Error('VALIDATION_ERROR');
-      const pageSize = query.pageSize === undefined ? 10 : Number(query.pageSize);
-      if (![10, 50, 100].includes(pageSize)) throw new Error('VALIDATION_ERROR');
-
-      const register = SidilanRepository.readRegister_(config);
-      const selected = selectedPositions === undefined ? null : new Set(selectedPositions);
-      const normalizedKeyword = keyword.toLocaleLowerCase();
-      const matches = register.records.filter(record => SidilanFilters.matchesRegisterFilter_(record, normalizedKeyword, selected) &&
-        (!sender || record.sender === sender) &&
-        (!selectedTargets.size || String(record.dispositionTargets || '').split(/[,;]/).some(target => selectedTargets.has(target.trim()))));
-      const pageCount = Math.max(1, Math.ceil(matches.length / pageSize));
-      const page = Math.min(pageValue, pageCount);
-      return {
-        success: true,
-        records: matches.slice((page - 1) * pageSize, page * pageSize),
-        positions: SidilanRepository.collectPositions_(register.sheet, register.records),
-        ...SidilanFilters.collectReportOptions_(register.records),
-        total: matches.length,
-        page,
-        pageSize,
-        warningCount: register.warningCount
-      };
+      const filter = validateListQuery_(query);
+      return list_(filter, SidilanRepository.readRegister_(config));
     } catch (error) {
       return { success: false, ...SidilanErrors.safeError_(error) };
     }
+  }
+
+  function validateListQuery_(query) {
+    if (!query || typeof query !== 'object' || Array.isArray(query)) throw new Error('VALIDATION_ERROR');
+    const rawKeyword = query.keyword === undefined ? '' : query.keyword;
+    if (typeof rawKeyword !== 'string' || rawKeyword.length > 200) throw new Error('VALIDATION_ERROR');
+    const keyword = rawKeyword.trim();
+
+    const selectedPositions = query.positions;
+    if (selectedPositions !== undefined && (!Array.isArray(selectedPositions) || selectedPositions.length > 100 || selectedPositions.some(value => typeof value !== 'string'))) {
+      throw new Error('VALIDATION_ERROR');
+    }
+    const sender = query.sender === undefined ? '' : query.sender;
+    const dispositionTargets = query.dispositionTargets === undefined ? [] : query.dispositionTargets;
+    if (typeof sender !== 'string' || sender.length > 5000 || !Array.isArray(dispositionTargets) || dispositionTargets.length > 100 || dispositionTargets.some(value => typeof value !== 'string' || value.length > 500)) throw new Error('VALIDATION_ERROR');
+    const selectedTargets = new Set(dispositionTargets);
+    const pageValue = query.page === undefined ? 1 : Number(query.page);
+    if (!Number.isFinite(pageValue) || pageValue < 1 || !Number.isInteger(pageValue)) throw new Error('VALIDATION_ERROR');
+    const pageSize = query.pageSize === undefined ? 10 : Number(query.pageSize);
+    if (![10, 50, 100].includes(pageSize)) throw new Error('VALIDATION_ERROR');
+    return { keyword, selectedPositions, sender, selectedTargets, pageValue, pageSize };
+  }
+
+  function list_(filter, register, options) {
+    const { keyword, selectedPositions, sender, selectedTargets, pageValue, pageSize } = filter;
+    const selected = selectedPositions === undefined ? null : new Set(selectedPositions);
+    const normalizedKeyword = keyword.toLocaleLowerCase();
+    const matches = register.records.filter(record => SidilanFilters.matchesRegisterFilter_(record, normalizedKeyword, selected) &&
+      (!sender || record.sender === sender) &&
+      (!selectedTargets.size || String(record.dispositionTargets || '').split(/[,;]/).some(target => selectedTargets.has(target.trim()))));
+    const pageCount = Math.max(1, Math.ceil(matches.length / pageSize));
+    const page = Math.min(pageValue, pageCount);
+    return {
+      success: true,
+      records: matches.slice((page - 1) * pageSize, page * pageSize),
+      positions: options ? options.positions : SidilanRepository.collectPositions_(register.sheet, register.records),
+      ...(options ? { senders: options.senders, targets: options.targets } : SidilanFilters.collectReportOptions_(register.records)),
+      total: matches.length,
+      page,
+      pageSize,
+      warningCount: register.warningCount
+    };
   }
 
   function getSuratDetail(reference) {
@@ -84,5 +114,5 @@ const SidilanIncomingRead = (() => {
     }
   }
 
-  return { getAppStatus, getInitialData, getSuratMasuk, getSuratDetail };
+  return { getAppStatus, getInitialData, getStartupData, getSuratMasuk, getSuratDetail };
 })();

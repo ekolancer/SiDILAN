@@ -11,6 +11,7 @@ export function callAppsScript(functionName, ...args) {
 
 export const letterApi = {
   getAppStatus: () => callAppsScript('getAppStatus'),
+  getStartupData: query => callAppsScript('getStartupData', query),
   getInitialData: () => callAppsScript('getInitialData'),
   getSuratMasuk: query => callAppsScript('getSuratMasuk', query),
   getSuratDetail: query => callAppsScript('getSuratDetail', query),

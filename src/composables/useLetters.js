@@ -85,6 +85,23 @@ export function useLetters(api, role) {
     createForm.value = emptyCreateForm()
   }
 
+  function setList(result) {
+    if (!result?.success) {
+      listError.value = result?.message || 'Daftar surat tidak dapat dimuat.'
+      return
+    }
+    records.value = result.records || []
+    appliedListQuery.value = listQuery.value
+    total.value = result.total || 0
+    page.value = result.page || 1
+    pageSize.value = result.pageSize || 10
+    allPositions.value = result.positions || allPositions.value
+    allSenders.value = result.senders || allSenders.value
+    allTargets.value = result.targets || allTargets.value
+    warningCount.value = result.warningCount || 0
+    emptyMessage.value = total.value ? `${total.value} pencatatan ditemukan.` : 'Tidak ada data yang cocok.'
+  }
+
   async function search(resetPage = true, preserveDetail = false) {
     if (!preserveDetail && detail.value && !confirmDiscard()) return false
     const trimmed = keyword.value.trim()
@@ -109,20 +126,8 @@ export function useLetters(api, role) {
         pageSize: pageSize.value,
       })
       if (currentRequest !== requestId) return
-      if (!result?.success) {
-        listError.value = result?.message || 'Daftar surat tidak dapat dimuat.'
-        return
-      }
-      records.value = result.records || []
-      appliedListQuery.value = queryKey
-      total.value = result.total || 0
-      page.value = result.page || 1
-      pageSize.value = result.pageSize || 10
-      allPositions.value = result.positions || allPositions.value
-      allSenders.value = result.senders || allSenders.value
-      allTargets.value = result.targets || allTargets.value
-      warningCount.value = result.warningCount || 0
-      emptyMessage.value = total.value ? `${total.value} pencatatan ditemukan.` : 'Tidak ada data yang cocok.'
+      setList(result)
+      if (result?.success) appliedListQuery.value = queryKey
     } catch (error) {
       if (currentRequest === requestId) listError.value = 'Daftar surat gagal dimuat. Coba lagi.'
     } finally {
@@ -301,7 +306,7 @@ export function useLetters(api, role) {
     editRecord, editMode, updateDescription, editIsDirty, showCreate, createBusy, createError,
     duplicateCandidates, createForm, createBaseline, createIsDirty,
     fields, editGroups, editLabels, reportColumns, display,
-    emptyCreateForm, confirmDiscard, closeDetail, closeCreate, closeForNavigation, search, resetSearch,
+    emptyCreateForm, confirmDiscard, closeDetail, closeCreate, closeForNavigation, search, setList, resetSearch,
     changePageSize, goToPage, openDetail, openEdit, startEditing, cancelEditing, submitEdit,
     submitCreate, openCreate,
   }

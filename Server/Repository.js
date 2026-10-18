@@ -5,10 +5,11 @@ const SidilanRepository = (() => {
     const lastRow = sheet.getLastRow();
     if (lastRow < 2) return { sheet, records: [], warningCount: 0 };
 
-    const values = sheet.getRange(2, 1, lastRow - 1, SidilanConfig.FIELD_NAMES_.length).getValues();
-    const displays = sheet.getRange(2, 1, lastRow - 1, SidilanConfig.FIELD_NAMES_.length).getDisplayValues();
-    const formulas = sheet.getRange(2, 1, lastRow - 1, SidilanConfig.FIELD_NAMES_.length).getFormulas();
-    const richTextValues = sheet.getRange(2, 1, lastRow - 1, SidilanConfig.FIELD_NAMES_.length).getRichTextValues();
+    const range = sheet.getRange(2, 1, lastRow - 1, SidilanConfig.FIELD_NAMES_.length);
+    const values = range.getValues();
+    const displays = range.getDisplayValues();
+    const formulas = range.getFormulas();
+    const richTextValues = range.getRichTextValues();
     const records = [];
     let warningCount = 0;
 

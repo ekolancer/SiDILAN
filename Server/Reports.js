@@ -3,8 +3,14 @@ const SidilanReports = (() => {
   function getDashboardStats() {
     try {
       const { config } = SidilanAuth.requireRole_('READ');
-      const register = SidilanRepository.readRegister_(config);
-      const records = register.records;
+      return dashboardStats_(SidilanRepository.readRegister_(config));
+    } catch (error) {
+      return { success: false, ...SidilanErrors.safeError_(error) };
+    }
+  }
+
+  function dashboardStats_(register) {
+    const records = register.records;
       const month = Utilities.formatDate(new Date(), 'Asia/Jakarta', 'yyyy-MM');
       const statusCounts = { selesai: 0, dalamProses: 0, lewatBatasWaktu: 0 };
       const units = new Map();
@@ -49,9 +55,6 @@ const SidilanReports = (() => {
         latest: records.slice(-5).reverse(), warningCount: register.warningCount,
         loadedAt: Utilities.formatDate(new Date(), 'Asia/Jakarta', "yyyy-MM-dd'T'HH:mm:ss")
       };
-    } catch (error) {
-      return { success: false, ...SidilanErrors.safeError_(error) };
-    }
   }
 
   function getIncomingReport(query) {
@@ -84,5 +87,5 @@ const SidilanReports = (() => {
     }
   }
 
-  return { getDashboardStats, getIncomingReport };
+  return { getDashboardStats, dashboardStats_, getIncomingReport };
 })();

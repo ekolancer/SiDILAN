@@ -28,8 +28,10 @@ const SidilanIncomingUpdate = (() => {
         const changedFields = Object.keys(changes).filter(field => String(changes[field]) !== String(current[field]));
         if (!changedFields.length) throw new Error('NO_CHANGES');
         validateChangedFields_(changes, current);
-        const positions = SidilanRepository.collectPositions_(sheet, SidilanRepository.readRegister_(config).records);
-        if (Object.hasOwn(changes, 'letterPosition') && !positions.includes(changes.letterPosition || '')) throw new Error('VALIDATION_ERROR');
+        if (Object.hasOwn(changes, 'letterPosition')) {
+          const positions = SidilanRepository.collectPositions_(sheet, SidilanRepository.readRegister_(config).records);
+          if (!positions.includes(changes.letterPosition || '')) throw new Error('VALIDATION_ERROR');
+        }
 
         const updated = SidilanRepository.updateFields_(config, sheet, row, changes, changedFields);
         return { success: true, record: updated };

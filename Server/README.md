@@ -4,7 +4,7 @@ Paket ini memecah `Code.js` yang diberikan menjadi file server kecil berdasarkan
 
 | File | Tanggung jawab |
 | --- | --- |
-| `Server/Api.js` | `doGet` dan sembilan fungsi global untuk `google.script.run` |
+| `Server/Api.js` | `doGet` dan fungsi global untuk `google.script.run` |
 | `Server/Config.js` | Properti aplikasi dan pemetaan 14 kolom surat masuk |
 | `Server/Auth.js`, `Server/Errors.js` | Pemeriksaan akses dan respons kesalahan |
 | `Server/Repository.js` | Baca/tulis Spreadsheet, validasi header, pembentukan record, posisi baris |
@@ -13,6 +13,8 @@ Paket ini memecah `Code.js` yang diberikan menjadi file server kecil berdasarkan
 | `Server/IncomingUpdate.js` | Validasi dan perubahan surat masuk |
 | `Server/Filters.js`, `Server/Reports.js` | Penyaringan, statistik, dan laporan |
 | `Server/Utils.js` | Tanggal, URL, dan normalisasi nilai |
+
+`getStartupData(query)` mengembalikan `initialData`, `list`, dan `dashboard` dari satu pembacaan register. Paginasi tetap membaca spreadsheet terkini setiap request. Perubahan surat tanpa perubahan posisi tidak membaca seluruh register; perubahan posisi tetap divalidasi terhadap pilihan terbaru. Endpoint lama tetap tersedia.
 
 Setiap modul menyimpan fungsi internal di dalam IIFE dan membuka antarmuka bernama `Sidilan...`. `Api.js` mempertahankan fungsi global agar pemanggilan frontend yang sudah ada tetap berlaku. Semua rujukan antarmodul terjadi saat fungsi dipanggil, sehingga tidak bergantung pada urutan eksekusi file saat inisialisasi. Server Apps Script memakai ruang nama global bersama dan tidak mendukung `import`/`export` ES6 secara langsung.
 

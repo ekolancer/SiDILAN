@@ -31,6 +31,12 @@ export function useDashboard(api) {
     return new Intl.DateTimeFormat('id-ID', { month: 'short', year: '2-digit', timeZone: 'UTC' }).format(new Date(Date.UTC(year, number - 1, 1)))
   }
 
+  function setDashboard(result) {
+    dashboardLoading.value = false
+    dashboardError.value = result?.success ? '' : result?.message || 'Ringkasan tidak dapat dimuat.'
+    dashboard.value = result?.success ? result : null
+  }
+
   async function loadDashboard() {
     const currentRequest = ++dashboardRequestId
     dashboardLoading.value = true
@@ -53,6 +59,6 @@ export function useDashboard(api) {
 
   return {
     dashboard, dashboardLoading, dashboardError, followupStatuses, classifiedTotal, donutStyle,
-    unitCounts, maxUnitCount, trendMax, trendWidth, trendPoints, trendLabel, loadDashboard,
+    unitCounts, maxUnitCount, trendMax, trendWidth, trendPoints, trendLabel, loadDashboard, setDashboard,
   }
 }

@@ -18,6 +18,10 @@ function getInitialData() {
   return SidilanIncomingRead.getInitialData();
 }
 
+function getStartupData(query) {
+  return SidilanIncomingRead.getStartupData(query);
+}
+
 function getSuratMasuk(query) {
   return SidilanIncomingRead.getSuratMasuk(query);
 }
