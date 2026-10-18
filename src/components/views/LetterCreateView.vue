@@ -18,11 +18,13 @@ function handleOpenChange(open) {
   <Dialog :open="showCreate" @update:open="handleOpenChange">
     <DialogContent class="letter-dialog-content" :show-close-button="false" aria-describedby="create-description">
       <DialogHeader class="letter-dialog-header">
-        <div class="min-w-0">
-          <DialogTitle id="create-title" class="text-xl font-semibold">Pencatatan surat baru</DialogTitle>
-          <DialogDescription id="create-description" class="mt-1 text-sm text-muted-foreground">Nomor agenda dibuat otomatis saat disimpan.</DialogDescription>
+        <div class="letter-dialog-title-row">
+          <div class="min-w-0">
+            <DialogTitle id="create-title" class="text-xl font-semibold">Pencatatan surat baru</DialogTitle>
+            <DialogDescription id="create-description" class="mt-1 text-sm text-muted-foreground">Nomor agenda dibuat otomatis saat disimpan.</DialogDescription>
+          </div>
+          <Button variant="ghost" size="icon" class="letter-dialog-close" aria-label="Tutup formulir" :disabled="createBusy" @click="closeCreate"><X class="h-5 w-5" aria-hidden="true" /></Button>
         </div>
-        <Button variant="ghost" size="icon" aria-label="Tutup formulir" :disabled="createBusy" @click="closeCreate"><X class="h-5 w-5" aria-hidden="true" /></Button>
       </DialogHeader>
       <div class="letter-dialog-scroll">
         <form class="record-form letter-dialog-form" @submit.prevent="submitCreate()">

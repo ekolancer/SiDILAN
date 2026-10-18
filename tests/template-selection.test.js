@@ -1,10 +1,8 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const vm = require('node:vm');
-const context = { Date, JSON, Set, Math, Number, String, Array, Object, RegExp, console };
-vm.createContext(context);
-vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'Code.js'), 'utf8'), context);
+const { loadServer } = require('./helpers/load-server.cjs');
+const context = loadServer({ Date, JSON, Set, Math, Number, String, Array, Object, RegExp, console });
 
 const rows = Array.from({ length: 15 }, () => Array(14).fill(''));
 rows[9][0] = '354.a';
@@ -32,12 +30,12 @@ const sheet = {
   }
 };
 const records = [{ rowHint: 10, agenda: '354.a' }];
-assert.equal(context.findSafeTemplateRow_(sheet, records), null, 'template formulas should prevent destructive reuse');
+assert.equal(context.SidilanRepository.findSafeTemplateRow_(sheet, records), null, 'template formulas should prevent destructive reuse');
 assert.equal(rangeCalls, 2, 'template scan should use batch reads, not a call per row');
-assert.equal(context.safeInsertRow_(sheet, records), 11, 'fallback inserts immediately after final real record');
+assert.equal(context.SidilanRepository.safeInsertRow_(sheet, records), 11, 'fallback inserts immediately after final real record');
 rows[10][6] = '';
 formulas[10][6] = '';
-assert.equal(context.findSafeTemplateRow_(sheet, records), null, 'template row must retain reserved agenda and description');
+assert.equal(context.SidilanRepository.findSafeTemplateRow_(sheet, records), null, 'template row must retain reserved agenda and description');
 rows[10][6] = 'reserved template description';
-assert.equal(context.findSafeTemplateRow_(sheet, records), 11, 'clean reserved row is safely reused');
+assert.equal(context.SidilanRepository.findSafeTemplateRow_(sheet, records), 11, 'clean reserved row is safely reused');
 

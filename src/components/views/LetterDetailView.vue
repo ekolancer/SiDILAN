@@ -18,14 +18,16 @@ function handleOpenChange(open) {
   <Dialog :open="Boolean(detail)" @update:open="handleOpenChange">
     <DialogContent class="letter-dialog-content" :show-close-button="false" aria-describedby="detail-description">
       <DialogHeader class="letter-dialog-header">
-        <div class="min-w-0">
-          <DialogTitle id="detail-title" class="break-words text-xl font-semibold">{{ detailLoading ? 'Memuat detail...' : display(detail?.subject) }}</DialogTitle>
-          <DialogDescription id="detail-description" class="mt-1 text-sm">Nomor agenda: {{ display(detail?.agenda) }}</DialogDescription>
+        <div class="letter-dialog-title-row">
+          <div class="letter-dialog-heading min-w-0">
+            <DialogTitle id="detail-title" class="break-words text-xl font-semibold">{{ detailLoading ? 'Memuat detail...' : display(detail?.subject) }}</DialogTitle>
+            <DialogDescription id="detail-description" class="mt-1 text-sm"><span class="agenda-label">Agenda</span><span class="agenda-value">{{ display(detail?.agenda) }}</span></DialogDescription>
+          </div>
+          <Button variant="ghost" size="icon" class="letter-dialog-close" aria-label="Tutup detail" :disabled="editBusy" @click="closeDetail"><X class="h-5 w-5" aria-hidden="true" /></Button>
         </div>
-        <div class="detail-actions flex flex-wrap justify-end gap-2">
-          <Button v-if="role === 'WRITE' && !editingDetail && !detailLoading" variant="outline" @click="startEditing('full')">Edit</Button>
-          <Button v-if="role === 'WRITE' && !editingDetail && !detailLoading" variant="ghost" @click="startEditing('quick')">Perbarui disposisi / tindak lanjut</Button>
-          <Button variant="ghost" size="icon" aria-label="Tutup detail" :disabled="editBusy" @click="closeDetail"><X class="h-5 w-5" aria-hidden="true" /></Button>
+        <div v-if="role === 'WRITE' && !editingDetail && !detailLoading" class="dialog-detail-actions">
+          <Button variant="outline" @click="startEditing('full')">Edit</Button>
+          <Button @click="startEditing('quick')">Update Tindak Lanjut</Button>
         </div>
       </DialogHeader>
       <div class="letter-dialog-scroll">
